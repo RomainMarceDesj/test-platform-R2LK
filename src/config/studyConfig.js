@@ -136,6 +136,17 @@ export const TARGET_KANJI = {
     otherKanji: '反',
     exampleSentence: '話の内容に作者の思想が反映されている作品や、テーマや背景が注意深く調査されていて、読者の知的好奇心を満たすことができる作品も少なくない。',
   },
+  '認識': {
+    reading: 'にんしき',
+    meaning: 'recognition, awareness',
+    acceptedMeanings: ['recognition', 'awareness', 'understanding', 'realisation', 'realization'],
+    difficulty: 'hard',
+    paragraph: 5,
+    testKanji: '認',
+    otherKanji: '識',
+    quizTrigger: true,
+    exampleSentence: 'このような漫画の特徴は以前よりもずっと広く認識されているし、また支持されるようにもなっている。',
+  },
   '特徴': {
     reading: 'とくちょう',
     meaning: 'characteristic, feature',

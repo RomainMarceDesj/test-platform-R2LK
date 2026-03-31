@@ -211,24 +211,32 @@ function ProductionQ({ word, config, onAnswer }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function KanjiTestPage({ participant, session, onComplete }) {
-  const { wasGlossed } = session;
+  const { wasGlossed, glossLog } = session;
 
   // Build 6-item test from glossed target words
   const testItems = useMemo(() => {
-    const glossed = Object.entries(wasGlossed ?? {})
+    // Primary: target kanji that were glossed
+    const targetGlossed = Object.entries(wasGlossed ?? {})
       .filter(([w, g]) => g && w in TARGET_KANJI)
       .map(([w]) => w);
 
-    const pool = shuffle(glossed);
-    const allWords = Object.keys(TARGET_KANJI);
+    // Fallback: any glossed word with a kanji character
+    const allGlossed = (glossLog ?? [])
+      .map(e => e.word)
+      .filter((w, i, arr) => arr.indexOf(w) === i) // unique
+      .filter(w => !targetGlossed.includes(w) && /[一-鿿]/.test(w));
+
+    const combined = [...shuffle(targetGlossed), ...shuffle(allGlossed)];
+    const pool = combined.slice(0, 6);
+    const allTargetWords = Object.keys(TARGET_KANJI);
 
     const items = [];
     const types = ['reading', 'meaning', 'production', 'reading', 'meaning', 'production'];
 
     for (let i = 0; i < Math.min(6, pool.length); i++) {
       const word   = pool[i % pool.length];
-      const config = TARGET_KANJI[word];
-      items.push({ word, config, type: types[i], allWords });
+      const config = TARGET_KANJI[word] ?? null; // null for non-target words
+      items.push({ word, config, type: types[i], allWords: allTargetWords });
     }
 
     return items;
@@ -253,6 +261,7 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
       <div className="page">
         <div className="page-inner animate-in" style={{ textAlign: 'center', paddingTop: '4rem' }}>
           <h2>No words to test</h2>
+          <p style={{ marginTop: '0.5rem' }}>No glossed words could be found for this test.</p>
           <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => onComplete([])}>
             Continue →
           </button>

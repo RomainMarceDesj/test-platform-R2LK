@@ -58,22 +58,32 @@ function scoreResult(selected, correctDirect, correctIndirect) {
 export default function RadicalNoticingTest({ participant, session, midQuizWord, onComplete }) {
   const { glossLog, wasGlossed } = session;
 
-  // Build ordered item list: glossed targets, most recent first, exclude mid-quiz word
+  // Build ordered item list: glossed targets first, fall back to any glossed words
   const orderedItems = (() => {
-    const glossedWords = Object.entries(wasGlossed ?? {})
+    const lastGlossIndex = {};
+    const allGlossedWords = []; // every word glossed, in order
+
+    for (const entry of (glossLog ?? [])) {
+      lastGlossIndex[entry.word] = entry.gloss_index;
+      if (!allGlossedWords.includes(entry.word)) {
+        allGlossedWords.push(entry.word);
+      }
+    }
+
+    // Primary pool: target kanji that were glossed (excluding mid-quiz word)
+    const targetGlossed = Object.entries(wasGlossed ?? {})
       .filter(([w, glossed]) => glossed && w !== midQuizWord && w in TARGET_KANJI)
       .map(([w]) => w);
 
-    // Sort by last gloss index descending (most recent first)
-    const lastGlossIndex = {};
-    for (const entry of (glossLog ?? [])) {
-      if (entry.word in TARGET_KANJI) {
-        lastGlossIndex[entry.word] = entry.gloss_index;
-      }
-    }
-    glossedWords.sort((a, b) => (lastGlossIndex[b] ?? 0) - (lastGlossIndex[a] ?? 0));
+    // Fallback pool: any glossed word that isn't the mid-quiz word and has a kanji char
+    const fallbackGlossed = allGlossedWords
+      .filter(w => w !== midQuizWord && !targetGlossed.includes(w) && /[一-鿿]/.test(w));
 
-    return glossedWords.slice(0, 5);
+    // Combine: targets first, then fallback, most recent first within each pool
+    const combined = [...targetGlossed, ...fallbackGlossed];
+    combined.sort((a, b) => (lastGlossIndex[b] ?? 0) - (lastGlossIndex[a] ?? 0));
+
+    return combined.slice(0, 5);
   })();
 
   const [currentIdx, setCurrentIdx]   = useState(0);
@@ -94,6 +104,25 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
 
     const load = async () => {
       try {
+        // For non-target words, fetch reading+meaning dynamically
+        let dynamicReading = config?.reading ?? '';
+        let dynamicMeaning = config?.meaning ?? '';
+        let dynamicSentence = config?.exampleSentence ?? '';
+
+        if (!config) {
+          try {
+            const infoRes = await axios.post(`${API_BASE}/get_word_info`, {
+              word: currentWord,
+              user_id: participant?.participantId ?? '',
+              app_version: 'thesis',
+            });
+            dynamicReading = infoRes.data.furigana ?? '';
+            dynamicMeaning = infoRes.data.translation ?? '';
+          } catch (e) {
+            console.error('RadicalNoticingTest: word info fetch failed', e);
+          }
+        }
+
         const [browseRes, breakdownRes] = await Promise.all([
           axios.post(`${API_BASE}/api/radicals/browse-filtered`, {
             target_kanji: targetChar,
@@ -124,11 +153,13 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
           radicals:        allCandidates,
           correctDirect:   Array.from(directSet),
           correctIndirect: indirectRadicals,
-          sentence:        config?.exampleSentence ?? '',
+          sentence:        dynamicSentence,
+          reading:         dynamicReading,
+          meaning:         dynamicMeaning,
         });
       } catch (e) {
         console.error('RadicalNoticingTest item load failed:', e);
-        setItemData({ radicals: [], correctDirect: [], correctIndirect: [], sentence: '' });
+        setItemData({ radicals: [], correctDirect: [], correctIndirect: [], sentence: '', reading: '', meaning: '' });
       } finally {
         setLoadingItem(false);
       }
@@ -172,7 +203,7 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
         <div className="page-inner animate-in" style={{ textAlign: 'center', paddingTop: '4rem' }}>
           <h2>No words to test</h2>
           <p style={{ marginTop: '0.5rem' }}>
-            You didn't gloss any of the target words during reading.
+            No glossed words could be found for this test.
           </p>
           <button
             className="btn btn-primary"
@@ -187,16 +218,19 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const compoundDisplay = config ? (
+  const displayReading = config?.reading ?? itemData?.reading ?? '';
+  const displayMeaning = config?.meaning ?? itemData?.meaning ?? '';
+
+  const compoundDisplay = (
     <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem' }}>
       <span style={{ color: 'var(--accent)', fontWeight: 600 }}>[–]</span>
       {otherKanji && <span>{otherKanji}</span>}
       {' '}
       <span style={{ fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
-        (<em>{config.reading}</em>, {config.meaning})
+        ({displayReading}{displayReading && displayMeaning ? ', ' : ''}{displayMeaning})
       </span>
     </span>
-  ) : null;
+  );
 
   return (
     <div className="page">
@@ -218,7 +252,10 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
           <div>
             <h2>
               What radicals can you remember seeing in the kanji for{' '}
-              <span style={{ color: 'var(--accent)' }}>"{config?.meaning}"</span>
+              {displayMeaning
+                ? <span style={{ color: 'var(--accent)' }}>"{displayMeaning}"</span>
+                : <span style={{ fontFamily: 'var(--font-jp)', color: 'var(--accent)' }}>{currentWord}</span>
+              }
             </h2>
             {compoundDisplay && (
               <div style={{ marginTop: '0.5rem' }}>{compoundDisplay}</div>
