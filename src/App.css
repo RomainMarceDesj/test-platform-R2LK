@@ -1,0 +1,1111 @@
+/* App.css — Thesis Platform
+   Aesthetic: clean academic, warm paper tones, Japanese reading context
+   Font stack: Shippori Mincho (display) + DM Sans (body)
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Palette */
+  --ink:          #1a1814;
+  --ink-muted:    #5a5652;
+  --ink-faint:    #9a9490;
+  --paper:        #f7f4ef;
+  --paper-warm:   #efe9e0;
+  --paper-border: #ddd8d0;
+  --accent:       #c0392b;      /* deep vermilion — ink stamp */
+  --accent-light: #f5e8e6;
+  --accent-dark:  #8b2419;
+  --group-a:      #2d6a4f;      /* forest green */
+  --group-b:      #1d3557;      /* deep navy */
+  --success:      #2d6a4f;
+  --warning:      #b5621e;
+
+  /* Typography */
+  --font-display: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+  --font-jp:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+
+  /* Spacing */
+  --space-xs:  0.25rem;
+  --space-sm:  0.5rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2.5rem;
+  --space-2xl: 4rem;
+
+  /* Layout */
+  --max-width: 680px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* Transitions */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* ── Layout shell ─────────────────────────────────────────────────────────── */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-xl) var(--space-md);
+}
+
+.page-inner {
+  width: 100%;
+  max-width: var(--max-width);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Decorative top bar */
+.page::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+}
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+
+h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+h3 {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+p {
+  color: var(--ink-muted);
+  font-weight: 300;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+
+.card {
+  background: white;
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.card-sm {
+  background: white;
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--radius-md);
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent-dark);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink-muted);
+  border: 1px solid var(--paper-border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+/* ── Form elements ────────────────────────────────────────────────────────── */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+label.form-label {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+label.form-label span {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  font-weight: 300;
+}
+
+input[type="text"],
+input[type="search"] {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--ink);
+  background: white;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus {
+  border-color: var(--accent);
+}
+
+/* Radio / select groups */
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: 0.65rem var(--space-md);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.12s;
+  background: white;
+}
+
+.option-item:hover {
+  border-color: var(--accent-light);
+  background: var(--accent-light);
+}
+
+.option-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.option-item input[type="radio"],
+.option-item input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.option-label {
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.option-desc {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+/* ── Likert scale ─────────────────────────────────────────────────────────── */
+
+.likert-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.likert-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.likert-question {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.likert-scale {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.likert-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--paper-border);
+  background: white;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.likert-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.likert-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.likert-anchors {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  padding: 0 2px;
+  margin-top: -4px;
+}
+
+/* ── Japanese text (reading screen) ──────────────────────────────────────── */
+
+.reading-text {
+  font-family: var(--font-jp);
+  font-size: 1.2rem;
+  line-height: 2.2;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.reading-text p {
+  color: var(--ink);
+  margin-bottom: 1.2em;
+}
+
+.word-highlighted {
+  background: var(--accent-light);
+  border-radius: 2px;
+  outline: 1.5px solid var(--accent);
+  outline-offset: 1px;
+}
+
+ruby rt {
+  font-size: 0.6em;
+  color: var(--ink-muted);
+}
+
+/* ── Radical chips ────────────────────────────────────────────────────────── */
+
+.radical-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.radical-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--paper-border);
+  border-radius: 20px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-size: 0.85rem;
+}
+
+.radical-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.radical-chip.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.radical-chip .chip-char {
+  font-family: var(--font-jp);
+  font-size: 1.1rem;
+}
+
+.radical-chip .chip-name {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* ── Quiz overlay ─────────────────────────────────────────────────────────── */
+
+.quiz-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 24, 20, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--space-md);
+  animation: fadeIn 0.25s var(--ease);
+}
+
+.quiz-panel {
+  background: var(--paper);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+}
+
+/* ── Progress indicator ───────────────────────────────────────────────────── */
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--paper-border);
+  transition: background 0.2s;
+}
+
+.progress-dot.active {
+  background: var(--accent);
+}
+
+.progress-dot.done {
+  background: var(--ink-muted);
+}
+
+/* ── Group badge ──────────────────────────────────────────────────────────── */
+
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.group-badge-a {
+  background: #e8f5ee;
+  color: var(--group-a);
+}
+
+.group-badge-b {
+  background: #e8eef5;
+  color: var(--group-b);
+}
+
+/* ── Multiple choice options ──────────────────────────────────────────────── */
+
+.mc-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.mc-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 0.75rem var(--space-md);
+  border: 1.5px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.12s;
+  background: white;
+}
+
+.mc-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.mc-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.mc-option.correct {
+  border-color: var(--success);
+  background: #e8f5ee;
+}
+
+.mc-option.incorrect {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  opacity: 0.7;
+}
+
+.mc-key {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--paper-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+
+.mc-option.selected .mc-key {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: slideUp 0.35s var(--ease) both;
+}
+
+/* stagger children */
+.animate-in > * { animation: slideUp 0.35s var(--ease) both; }
+.animate-in > *:nth-child(1) { animation-delay: 0.05s; }
+.animate-in > *:nth-child(2) { animation-delay: 0.10s; }
+.animate-in > *:nth-child(3) { animation-delay: 0.15s; }
+.animate-in > *:nth-child(4) { animation-delay: 0.20s; }
+.animate-in > *:nth-child(5) { animation-delay: 0.25s; }
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+
+.divider {
+  height: 1px;
+  background: var(--paper-border);
+  margin: var(--space-sm) 0;
+}
+
+/* ── Search bar ───────────────────────────────────────────────────────────── */
+
+.search-wrap {
+  position: relative;
+}
+
+.search-wrap svg {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.search-wrap input {
+  padding-left: 2.25rem;
+}
+
+/* ── Finish reading button (fixed bottom) ─────────────────────────────────── */
+
+.reading-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-md) var(--space-lg);
+  background: linear-gradient(transparent, var(--paper) 40%);
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.reading-footer .btn {
+  pointer-events: all;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  h1 { font-size: 1.6rem; }
+  .card { padding: var(--space-lg); }
+  .likert-btn { width: 40px; height: 40px; }
+  .page { padding: var(--space-lg) var(--space-sm); }
+}
+
+/* ── Radical Search Tray ─────────────────────────────────────────────────────
+   Re-themed for thesis platform warm paper palette.
+   Sections are visually separated with clear borders and backgrounds
+   so radicals, candidates, and selected kanji are never confused.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.radical-tray {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--paper);
+  border-top: 2px solid var(--accent);
+  transition: height 0.3s ease, transform 0.3s ease;
+  z-index: 1000;
+  box-shadow: 0 -6px 32px rgba(0,0,0,0.15);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.radical-tray-collapsed { height: 0; transform: translateY(100%); }
+.radical-tray-half      { height: 45vh; min-height: 320px; }
+.radical-tray-full      { height: 80vh; min-height: 500px; }
+
+/* Header controls */
+.tray-header-controls {
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px;
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 10;
+  border-bottom: 1px solid var(--paper-border);
+}
+
+.tray-expand-button {
+  padding: 8px 20px;
+  background: var(--paper-warm);
+  color: var(--ink);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tray-expand-button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Close button */
+.tray-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  color: var(--ink-faint);
+  border: 1px solid var(--paper-border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.tray-close-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* ── Section 1: Target word display ──────────────────────────────────────── */
+.target-kanji-display {
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 10px 16px;
+  text-align: center;
+}
+
+.target-label {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.target-kanji-large {
+  font-family: var(--font-jp);
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--ink);
+  display: block;
+  line-height: 1.2;
+}
+
+/* ── Mode toggle ─────────────────────────────────────────────────────────── */
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--paper-border);
+  background: var(--paper);
+}
+
+.mode-button {
+  flex: 1;
+  padding: 8px 12px;
+  background: white;
+  color: var(--ink-muted);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-button:hover  { border-color: var(--accent); color: var(--accent); }
+.mode-button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* ── Section: Selected radicals bar ─────────────────────────────────────── */
+.selected-radicals-section {
+  padding: 10px 16px;
+  background: #f0faf5;                 /* distinct green-tinted bg */
+  border-bottom: 1.5px solid #2d6a4f;
+}
+
+.selected-radicals-section .section-label {
+  color: #2d6a4f;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.selected-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.selected-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #2d6a4f;
+  border: none;
+  border-radius: 20px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.85rem;
+}
+.selected-chip:hover { background: var(--accent); }
+.selected-chip .radical-character { font-family: var(--font-jp); font-size: 1.1rem; }
+.selected-chip .radical-meaning   { font-size: 0.75rem; opacity: 0.85; }
+.remove-icon { font-size: 0.8rem; margin-left: 2px; opacity: 0.7; }
+
+/* ── Section: Search input ───────────────────────────────────────────────── */
+.tray-search-section {
+  padding: 10px 16px;
+  position: sticky;
+  top: 40px;
+  background: var(--paper);
+  z-index: 9;
+  border-bottom: 1px solid var(--paper-border);
+}
+
+.radical-search-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  box-sizing: border-box;
+}
+.radical-search-input:focus { border-color: var(--accent); }
+
+.search-loading {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+  margin-top: 4px;
+  text-align: center;
+}
+
+/* ── Section: Radical search results ────────────────────────────────────── */
+.radical-suggestions-section,
+.all-radicals-section,
+.candidates-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--paper-border);
+}
+
+.section-label {
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Radical chips — search results and browse */
+.radical-chips-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+
+.radical-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border: 1.5px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 56px;
+  user-select: none;
+}
+.radical-chip:hover  { border-color: var(--accent); background: var(--accent-light); }
+.radical-chip.selected { background: var(--accent); border-color: var(--accent); color: white; }
+
+.radical-character { font-family: var(--font-jp); font-size: 1.3rem; line-height: 1; margin-bottom: 3px; }
+.radical-meaning   { font-size: 0.7rem; color: var(--ink-faint); text-align: center; }
+.radical-chip.selected .radical-meaning { color: rgba(255,255,255,0.85); }
+
+/* ── Section: Candidates grid ────────────────────────────────────────────── */
+.candidates-section {
+  background: var(--paper-warm);      /* warm tint to distinguish from radical sections */
+}
+
+.candidates-section .section-label { color: var(--warning); }
+
+.candidate-instruction {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+.candidate-kanji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.candidate-kanji {
+  font-family: var(--font-jp);
+  font-size: 1.6rem;
+  font-weight: 500;
+  padding: 10px;
+  background: white;
+  border: 1.5px solid var(--paper-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  user-select: none;
+  position: relative;
+}
+.candidate-kanji:hover       { border-color: var(--accent); background: var(--accent-light); transform: scale(1.08); }
+.candidate-kanji.selected-candidate { background: var(--accent); border-color: var(--accent); color: white; }
+
+.selected-indicator {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 11px;
+  color: white;
+  font-weight: 600;
+}
+
+.more-results {
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  font-style: italic;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.no-results {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-style: italic;
+  text-align: center;
+  padding: 16px;
+}
+
+/* ── Section: Selected kanji confirmation ────────────────────────────────── */
+.selected-candidates-section {
+  padding: 14px 16px;
+  background: #e8f0fe;               /* distinct blue tint — you have found the kanji */
+  border: 1.5px solid #185fa5;
+  border-radius: var(--radius-md);
+  margin: 10px 16px;
+}
+
+.selected-candidates-section .section-label { color: #185fa5; }
+
+.selected-candidates-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+
+.selected-candidate-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.selected-candidate-char {
+  font-family: var(--font-jp);
+  font-size: 2rem;
+  font-weight: 500;
+  color: #185fa5;
+  background: white;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid #185fa5;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+.selected-candidate-char.expanded { background: #185fa5; color: white; }
+.selected-candidate-char.clickable:hover { background: #e6f1fb; }
+
+.candidate-kanji-readings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.kanji-meaning {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.kanji-readings-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+
+.reading-tag {
+  font-family: var(--font-jp);
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+.reading-tag.on  { background: #e8f0fe; color: #185fa5; }
+.reading-tag.kun { background: #f0faf5; color: #2d6a4f; }
+
+.candidate-radical-reveal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  max-width: 200px;
+}
+
+.reveal-radical-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  background: var(--paper-warm);
+  border: 1px solid var(--paper-border);
+  border-radius: 10px;
+  padding: 2px 7px;
+}
+.reveal-radical-chip .radical-character { font-family: var(--font-jp); font-size: 0.9rem; margin-bottom: 0; }
+.reveal-radical-chip .radical-meaning   { font-size: 0.7rem; color: var(--ink-faint); }
+
+/* Confirm button */
+.check-answer-button {
+  margin-top: 12px;
+  padding: 10px 24px;
+  background: #185fa5;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+.check-answer-button:hover { background: #0c447c; }
+
+/* Browse mode */
+.browse-radicals-section {
+  padding: 12px 16px;
+  overflow-y: auto;
+}
+.radicals-by-stroke  { display: flex; flex-direction: column; gap: 14px; }
+.radicals-filtered-browse { display: flex; flex-direction: column; gap: 8px; }
+.stroke-group        { border-bottom: 1px solid var(--paper-border); padding-bottom: 10px; }
+.stroke-label        { font-size: 0.72rem; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: block; }
+.group-separator     { height: 1px; background: var(--paper-border); margin: 6px 0; }
+.loading-radicals    { text-align: center; color: var(--ink-faint); font-size: 0.875rem; padding: 20px; }
+
+/* ClassicGloss popup styles */
+.classic-gloss-popup {
+  position: fixed;
+  width: 320px;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  z-index: 500;
+  font-family: var(--font-body);
+}
+.gloss-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+  padding: 4px 8px;
+  line-height: 1;
+}
+.gloss-close-btn:hover { color: var(--ink); }
+.gloss-word-section  { margin-bottom: 0.75rem; }
+.gloss-word-kanji    { font-family: var(--font-jp); font-size: 1.8rem; font-weight: 500; margin-bottom: 0.4rem; }
+.gloss-label         { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin-right: 0.4rem; }
+.gloss-furigana,
+.gloss-translation   { font-size: 0.9rem; margin-bottom: 0.2rem; }
+.gloss-loading       { display: flex; gap: 4px; padding: 8px 0; }
+.gloss-loading-dot   { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); animation: blink 1.2s infinite; }
+.gloss-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.gloss-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
+.gloss-error         { font-size: 0.82rem; color: var(--accent); }
+.gloss-breakdown-section { border-top: 1px solid var(--paper-border); padding-top: 0.7rem; }
+.gloss-breakdown-heading { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin-bottom: 0.5rem; }
+.gloss-kanji-entry   { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem; }
+.gloss-kanji-char    { font-family: var(--font-jp); font-size: 1.3rem; width: 28px; flex-shrink: 0; }
+.gloss-kanji-meta    { flex: 1; }
+.gloss-kanji-meaning { font-size: 0.82rem; color: var(--ink-muted); margin-bottom: 0.2rem; }
+.gloss-kanji-readings { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 0.3rem; }
+.gloss-reading-tag   { font-family: var(--font-jp); font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; }
+.gloss-reading-tag.on  { background: #e8f0fe; color: #185fa5; }
+.gloss-reading-tag.kun { background: #f0faf5; color: #2d6a4f; }
+.gloss-radical-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.gloss-radical-chip  { display: inline-flex; align-items: center; gap: 3px; font-size: 0.75rem; background: var(--paper-warm); border: 1px solid var(--paper-border); border-radius: 10px; padding: 2px 7px; }
+.chip-radical        { font-family: var(--font-jp); font-size: 0.9rem; }
+.chip-label          { color: var(--ink-faint); font-size: 0.7rem; }
+.gloss-no-radicals   { font-size: 0.78rem; color: var(--ink-faint); font-style: italic; }
+
+@media (max-width: 600px) {
+  .radical-tray-half { height: 50vh; }
+  .radical-tray-full { height: 85vh; }
+  .radical-character { font-size: 1.1rem; }
+  .candidate-kanji   { font-size: 1.4rem; min-width: 44px; min-height: 44px; }
+}
