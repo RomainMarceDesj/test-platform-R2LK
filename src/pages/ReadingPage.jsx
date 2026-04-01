@@ -204,6 +204,33 @@ export default function ReadingPage({
     setShowRadicalSearch(true);
   }, [wordData]);
 
+  // ── Delayed mid-quiz fire — called after gloss closes in either group ───────
+  const fireDelayedMidQuiz = useCallback(() => {
+    const pending = pendingMidQuizRef.current;
+    if (!pending) return;
+    pendingMidQuizRef.current = null;
+    midQuizFiredRef.current = true;
+
+    // Log to backend (fire-and-forget)
+    axios.post(`${API_BASE}/api/thesis/session/mid-quiz-triggered`, {
+      session_id: sessionId,
+      trigger_word: pending.word,
+      gloss_index: pending.glossIndex,
+    }).catch(e => console.error('Mid-quiz trigger log failed:', e));
+
+    // Show quiz 2s after gloss closes — pass full reading state so App can save it
+    setTimeout(() => {
+      onMidQuizTriggered({
+        word:       pending.word,
+        glossIndex: pending.glossIndex,
+        sessionId,
+        glossLog:   [...glossLogRef.current],
+        wasGlossed: { ...wasGlossedRef.current },
+        glossCount: glossCountRef.current,
+      });
+    }, 2000);
+  }, [sessionId, onMidQuizTriggered]);
+
   const handleRadicalTraySuccess = useCallback(async (selectedKanji, radicalsClicked) => {
     const kanji = radicalSearchTarget?.kanji;
     setShowRadicalSearch(false);
@@ -230,7 +257,7 @@ export default function ReadingPage({
     await logGloss(kanji, radicalsClicked ?? []);
     // Fire mid-quiz 2s after tray closes (Group A)
     fireDelayedMidQuiz();
-  }, [radicalSearchTarget, participantId, appVersion, logGloss]);
+  }, [radicalSearchTarget, participantId, appVersion, logGloss, fireDelayedMidQuiz]);
 
   const handleRadicalTrayClose = useCallback(() => {
     glossStartTsRef.current = null;
@@ -268,32 +295,7 @@ export default function ReadingPage({
     await logGloss(word, []);
   }, [logGloss]);
 
-  // ── Delayed mid-quiz fire — called after gloss closes in either group ───────
-  const fireDelayedMidQuiz = useCallback(() => {
-    const pending = pendingMidQuizRef.current;
-    if (!pending) return;
-    pendingMidQuizRef.current = null;
-    midQuizFiredRef.current = true;
 
-    // Log to backend (fire-and-forget)
-    axios.post(`${API_BASE}/api/thesis/session/mid-quiz-triggered`, {
-      session_id: sessionId,
-      trigger_word: pending.word,
-      gloss_index: pending.glossIndex,
-    }).catch(e => console.error('Mid-quiz trigger log failed:', e));
-
-    // Show quiz 2s after gloss closes — pass full reading state so App can save it
-    setTimeout(() => {
-      onMidQuizTriggered({
-        word:       pending.word,
-        glossIndex: pending.glossIndex,
-        sessionId,
-        glossLog:   [...glossLogRef.current],
-        wasGlossed: { ...wasGlossedRef.current },
-        glossCount: glossCountRef.current,
-      });
-    }, 2000);
-  }, [sessionId, onMidQuizTriggered]);
 
   const handleGlossDismiss = useCallback(() => {
     setActiveGloss(null);

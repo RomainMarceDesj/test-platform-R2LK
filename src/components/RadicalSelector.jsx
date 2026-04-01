@@ -2,11 +2,12 @@
  * RadicalSelector.jsx
  * ===================
  * Shared component for mid-quiz and radical noticing test.
- * Displays a chip grid of candidate radicals + a search bar.
+ * Displays radical chips sorted by stroke count + a search bar.
  * Tracks: selected radicals, search bar usage, search queries, time to submit.
+ * The direct/indirect distinction is NOT shown in the UI — kept only for scoring.
  *
  * Props:
- *  candidateRadicals  [{ radical, english_names, is_direct }]
+ *  candidateRadicals  [{ radical, english_names, is_direct, stroke_count }]
  *  onSubmit           ({ selected, usedSearch, searchQueries, timeToSubmitMs })
  *  submitLabel        string
  */
@@ -18,36 +19,42 @@ export default function RadicalSelector({
   onSubmit,
   submitLabel = 'Submit',
 }) {
-  const [selected, setSelected]         = useState(new Set());
-  const [searchQuery, setSearchQuery]   = useState('');
-  const [usedSearch, setUsedSearch]     = useState(false);
+  const [selected, setSelected]           = useState(new Set());
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [usedSearch, setUsedSearch]       = useState(false);
   const [searchQueries, setSearchQueries] = useState([]);
 
-  const startTimeRef  = useRef(Date.now());
+  const startTimeRef   = useRef(Date.now());
   const searchInputRef = useRef(null);
 
-  // Auto-focus search on mount
   useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
 
-  // ── Filtering ─────────────────────────────────────────────────────────────
+  // ── Sort by stroke count, then filter by search ───────────────────────────
+  const sorted = [...candidateRadicals].sort((a, b) =>
+    (a.stroke_count ?? 99) - (b.stroke_count ?? 99)
+  );
+
   const filtered = searchQuery.trim()
-    ? candidateRadicals.filter(r => {
+    ? sorted.filter(r => {
         const q = searchQuery.toLowerCase();
         return (
           r.radical.includes(q) ||
           r.english_names?.some(n => n.toLowerCase().includes(q))
         );
       })
-    : candidateRadicals;
+    : sorted;
 
-  // Direct radicals first, then indirect
-  const sorted = [...filtered].sort((a, b) => {
-    if (a.is_direct && !b.is_direct) return -1;
-    if (!a.is_direct && b.is_direct) return 1;
-    return 0;
-  });
+  // Group by stroke count for display
+  const byStroke = filtered.reduce((acc, r) => {
+    const sc = r.stroke_count ?? 0;
+    if (!acc[sc]) acc[sc] = [];
+    acc[sc].push(r);
+    return acc;
+  }, {});
+  const strokeGroups = Object.entries(byStroke)
+    .sort(([a], [b]) => Number(a) - Number(b));
 
   // ── Interaction ───────────────────────────────────────────────────────────
   const toggleRadical = useCallback((radical) => {
@@ -65,7 +72,6 @@ export default function RadicalSelector({
     if (val.trim() && !usedSearch) setUsedSearch(true);
     if (val.trim()) {
       setSearchQueries(prev => {
-        // Only record meaningful new queries (changed by 1+ chars from last)
         const last = prev[prev.length - 1] ?? '';
         return val !== last ? [...prev, val] : prev;
       });
@@ -101,60 +107,35 @@ export default function RadicalSelector({
         />
       </div>
 
-      {/* Direct radicals section */}
-      {sorted.filter(r => r.is_direct).length > 0 && (
-        <div>
-          <div style={{
-            fontSize: '0.72rem',
-            fontWeight: 500,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-faint)',
-            marginBottom: '0.5rem'
-          }}>
-            Radicals
-          </div>
-          <div className="radical-chip-grid">
-            {sorted.filter(r => r.is_direct).map(r => (
-              <RadicalChip
-                key={r.radical}
-                radical={r}
-                isSelected={selected.has(r.radical)}
-                onToggle={toggleRadical}
-              />
-            ))}
-          </div>
+      {/* Radicals grouped by stroke count */}
+      {strokeGroups.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {strokeGroups.map(([sc, radicals]) => (
+            <div key={sc}>
+              <div style={{
+                fontSize: '0.68rem',
+                fontWeight: 500,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--ink-faint)',
+                marginBottom: '0.4rem',
+              }}>
+                {sc} stroke{Number(sc) !== 1 ? 's' : ''}
+              </div>
+              <div className="radical-chip-grid">
+                {radicals.map(r => (
+                  <RadicalChip
+                    key={r.radical}
+                    radical={r}
+                    isSelected={selected.has(r.radical)}
+                    onToggle={toggleRadical}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-
-      {/* Indirect / components of components */}
-      {sorted.filter(r => !r.is_direct).length > 0 && (
-        <div>
-          <div style={{
-            fontSize: '0.72rem',
-            fontWeight: 500,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-faint)',
-            marginBottom: '0.5rem'
-          }}>
-            Sub-components
-          </div>
-          <div className="radical-chip-grid">
-            {sorted.filter(r => !r.is_direct).map(r => (
-              <RadicalChip
-                key={r.radical}
-                radical={r}
-                isSelected={selected.has(r.radical)}
-                onToggle={toggleRadical}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* No results */}
-      {sorted.length === 0 && (
+      ) : (
         <p style={{ fontSize: '0.875rem', color: 'var(--ink-faint)', textAlign: 'center', padding: '1rem' }}>
           No radicals match "{searchQuery}"
         </p>
@@ -168,10 +149,7 @@ export default function RadicalSelector({
       )}
 
       {/* Submit */}
-      <button
-        className="btn btn-primary btn-full"
-        onClick={handleSubmit}
-      >
+      <button className="btn btn-primary btn-full" onClick={handleSubmit}>
         {submitLabel}
       </button>
 
@@ -179,11 +157,10 @@ export default function RadicalSelector({
         Select any radicals you remember seeing. If you don't remember any,{' '}
         <strong>leave everything unselected</strong> and tap submit — you don't need to click anything to continue.
       </p>
+
     </div>
   );
 }
-
-// ── Chip sub-component ────────────────────────────────────────────────────────
 
 function RadicalChip({ radical, isSelected, onToggle }) {
   const name = radical.english_names?.[0] ?? '';
@@ -192,8 +169,10 @@ function RadicalChip({ radical, isSelected, onToggle }) {
       className={`radical-chip ${isSelected ? 'selected' : ''}`}
       onClick={() => onToggle(radical.radical)}
     >
-      <span className="chip-char">{radical.radical}</span>
-      {name && <span className="chip-name">{name}</span>}
+      <span className="chip-char" style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem' }}>
+        {radical.radical}
+      </span>
+      {name && <span className="chip-name" style={{ fontSize: '0.72rem' }}>{name}</span>}
     </button>
   );
 }
