@@ -2,10 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install --include=dev && npm run build"
+    "buildCommand": "npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0 --port $PORT",
+    "startCommand": "npx serve dist -l $PORT",
     "healthcheckPath": "/"
   }
 }
