@@ -17,11 +17,9 @@ import { API_BASE, TARGET_KANJI } from '../config/studyConfig';
 
 // ── Sentence display — replaces the target kanji char with [–] ───────────────
 
-function SentenceWithBlank({ sentence, targetChar, otherKanji }) {
-  if (!sentence) return null;
+function SentenceWithBlank({ sentence, fullWord, blankDisplay }) {
+  if (!sentence || !fullWord) return null;
 
-  // Split on the full word (testKanji + otherKanji) so we can replace cleanly
-  const fullWord = targetChar + (otherKanji ?? '');
   const parts = sentence.split(new RegExp(`(${fullWord})`, 'g'));
 
   return (
@@ -29,7 +27,7 @@ function SentenceWithBlank({ sentence, targetChar, otherKanji }) {
       {parts.map((part, i) =>
         part === fullWord
           ? <span key={i} style={{ color: 'var(--accent)', fontWeight: 500, fontFamily: 'var(--font-jp)' }}>
-              [–]{otherKanji ?? ''}
+              {blankDisplay}
             </span>
           : <span key={i}>{part}</span>
       )}
@@ -53,6 +51,7 @@ export default function MidQuizPage({
   // All display state — populated either from staticConfig or fetched dynamically
   const [targetChar, setTargetChar]     = useState(staticConfig?.testKanji ?? midQuizWord?.[0] ?? '');
   const [otherKanji, setOtherKanji]     = useState(staticConfig?.otherKanji ?? null);
+  const [blankDisplay, setBlankDisplay] = useState(staticConfig?.blankDisplay ?? '');
   const [reading, setReading]           = useState(staticConfig?.reading ?? '');
   const [meaning, setMeaning]           = useState(staticConfig?.meaning ?? '');
   const [sentence, setSentence]         = useState(staticConfig?.exampleSentence ?? '');
@@ -84,7 +83,10 @@ export default function MidQuizPage({
             console.error('MidQuiz: word info fetch failed', e);
           }
           setTargetChar(char);
-          setOtherKanji(midQuizWord.slice(1) || null);
+          const rest = midQuizWord.slice(1) || null;
+          setOtherKanji(rest);
+          // For unknown words, default to hiding first kanji
+          setBlankDisplay('[–]' + (rest ?? ''));
         }
 
         // Fetch radical candidates (±5 window) and breakdown
@@ -179,8 +181,7 @@ export default function MidQuizPage({
 
   const compoundDisplay = (
     <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem' }}>
-      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>[–]</span>
-      {otherKanji && <span>{otherKanji}</span>}
+      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{blankDisplay || '[–]'}</span>
       {' '}
       <span style={{ fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
         ({reading}{reading && meaning ? ', ' : ''}{meaning})
@@ -217,8 +218,8 @@ export default function MidQuizPage({
           }}>
             <SentenceWithBlank
               sentence={sentence}
-              targetChar={targetChar}
-              otherKanji={otherKanji}
+              fullWord={midQuizWord}
+              blankDisplay={blankDisplay}
             />
           </div>
         )}

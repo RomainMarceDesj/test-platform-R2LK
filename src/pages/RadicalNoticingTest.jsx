@@ -14,16 +14,15 @@ import { API_BASE, TARGET_KANJI } from '../config/studyConfig';
 
 // ── Sentence display (same as MidQuizPage) ────────────────────────────────────
 
-function SentenceWithBlank({ sentence, targetKanji, otherKanji }) {
-  if (!sentence) return null;
-  const parts = sentence.split(new RegExp(`(${targetKanji})`, 'g'));
+function SentenceWithBlank({ sentence, fullWord, blankDisplay }) {
+  if (!sentence || !fullWord) return null;
+  const parts = sentence.split(new RegExp(`(${fullWord})`, 'g'));
   return (
     <span>
       {parts.map((part, i) =>
-        part === targetKanji
-          ? <span key={i} style={{ color: 'var(--accent)', fontWeight: 500 }}>
-              <span>[–]</span>
-              {otherKanji && <span>{otherKanji}</span>}
+        part === fullWord
+          ? <span key={i} style={{ color: 'var(--accent)', fontWeight: 500, fontFamily: 'var(--font-jp)' }}>
+              {blankDisplay}
             </span>
           : <span key={i}>{part}</span>
       )}
@@ -149,6 +148,7 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
           .filter(r => !r.is_direct)
           .map(r => r.radical);
 
+        const configRef = TARGET_KANJI[currentWord];
         setItemData({
           radicals:        allCandidates,
           correctDirect:   Array.from(directSet),
@@ -156,6 +156,8 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
           sentence:        dynamicSentence,
           reading:         dynamicReading,
           meaning:         dynamicMeaning,
+          blankDisplay:    configRef?.blankDisplay ?? ('[–]' + (currentWord.slice(1) || '')),
+          fullWord:        currentWord,
         });
       } catch (e) {
         console.error('RadicalNoticingTest item load failed:', e);
@@ -192,7 +194,8 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
     if (currentIdx + 1 < orderedItems.length) {
       setCurrentIdx(prev => prev + 1);
     } else {
-      onComplete(newResults);
+      // Pass tested words list so KanjiTestPage can exclude them
+      onComplete(newResults, orderedItems);
     }
   };
 
@@ -221,10 +224,11 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
   const displayReading = config?.reading ?? itemData?.reading ?? '';
   const displayMeaning = config?.meaning ?? itemData?.meaning ?? '';
 
+  const displayBlank = itemData?.blankDisplay ?? (config?.blankDisplay ?? '[–]');
+
   const compoundDisplay = (
     <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem' }}>
-      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>[–]</span>
-      {otherKanji && <span>{otherKanji}</span>}
+      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{displayBlank}</span>
       {' '}
       <span style={{ fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
         ({displayReading}{displayReading && displayMeaning ? ', ' : ''}{displayMeaning})
@@ -275,8 +279,8 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
             }}>
               <SentenceWithBlank
                 sentence={itemData.sentence}
-                targetKanji={targetChar}
-                otherKanji={otherKanji}
+                fullWord={itemData.fullWord ?? currentWord}
+                blankDisplay={itemData.blankDisplay ?? '[–]'}
               />
             </div>
           )}

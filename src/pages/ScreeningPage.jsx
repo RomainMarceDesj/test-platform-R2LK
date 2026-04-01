@@ -73,15 +73,15 @@ const OVERALL_LEVEL = [
 ];
 
 const READING_LEVEL = [
-  { key: '1', label: '1 — Cannot read Japanese text',
+  { key: '1', label: 'Cannot read Japanese text',
     desc: 'I cannot read hiragana, katakana, or kanji' },
-  { key: '2', label: '2 — Very limited',
+  { key: '2', label: 'Very limited',
     desc: 'I can read hiragana and katakana but very few kanji' },
-  { key: '3', label: '3 — Basic',
+  { key: '3', label: 'Basic',
     desc: 'I can read simple texts but need a dictionary often' },
-  { key: '4', label: '4 — Intermediate',
+  { key: '4', label: 'Intermediate',
     desc: 'I can read most everyday texts with occasional help' },
-  { key: '5', label: '5 — Advanced',
+  { key: '5', label: 'Advanced',
     desc: 'I can read almost any Japanese text with little or no difficulty' },
 ];
 

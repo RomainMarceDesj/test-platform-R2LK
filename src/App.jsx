@@ -92,17 +92,24 @@ export default function App() {
   }, []);
 
   const handleMidQuizTriggered = useCallback((triggerData) => {
-    // triggerData: { word, glossIndex }
+    // triggerData: { word, glossIndex, glossLog, wasGlossed, glossCount, sessionId }
+    // Save full reading state so ReadingPage can restore it on remount
     setSession(prev => ({
       ...prev,
-      midQuizWord: triggerData.word,
+      midQuizWord:      triggerData.word,
       midQuizGlossIndex: triggerData.glossIndex,
+      glossLog:         triggerData.glossLog    ?? prev.glossLog,
+      wasGlossed:       triggerData.wasGlossed  ?? prev.wasGlossed,
+      glossCount:       triggerData.glossCount  ?? prev.glossCount ?? 0,
+      sessionId:        triggerData.sessionId   ?? prev.sessionId,
     }));
     setPhase(PHASES.MID_QUIZ);
   }, []);
 
-  const handleRadicalNoticingComplete = useCallback((radicalResults) => {
+  const handleRadicalNoticingComplete = useCallback((radicalResults, testedWords) => {
     setResults(prev => ({ ...prev, radicalNoticingTest: radicalResults }));
+    // Save words used in noticing test so KanjiTestPage can exclude them
+    setSession(prev => ({ ...prev, noticingTestedWords: testedWords ?? [] }));
     setPhase(PHASES.KANJI_TEST);
   }, []);
 

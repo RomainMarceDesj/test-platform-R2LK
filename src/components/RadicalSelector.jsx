@@ -175,8 +175,9 @@ export default function RadicalSelector({
         {submitLabel}
       </button>
 
-      <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', textAlign: 'center' }}>
-        Select all radicals you remember seeing in this kanji. You can select none if you don't remember any.
+      <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)', textAlign: 'center', lineHeight: 1.55 }}>
+        Select any radicals you remember seeing. If you don't remember any,{' '}
+        <strong>leave everything unselected</strong> and tap submit — you don't need to click anything to continue.
       </p>
     </div>
   );

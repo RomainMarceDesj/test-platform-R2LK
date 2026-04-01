@@ -43,14 +43,24 @@ export default function ReadingPage({
   const [isLoading, setIsLoading] = useState(true);
 
   // ── Session ───────────────────────────────────────────────────────────────
+  // Detect remount after mid-quiz — session has saved state from before the quiz
+  const isRemount = (session.glossCount ?? 0) > 0 || !!midQuizResults;
+
   const sessionIdRef     = useRef(session.sessionId ?? uuidv4());
   const sessionId        = sessionIdRef.current;
-  const glossCountRef    = useRef(0);
-  const glossLogRef      = useRef([]);         // kept in ref for heartbeat closure
-  const wasGlossedRef    = useRef(
-    Object.fromEntries(Object.keys(TARGET_KANJI).map(k => [k, false]))
+
+  // Restore gloss tracking from saved session state if remounting after mid-quiz
+  const glossCountRef    = useRef(session.glossCount ?? 0);
+  const glossLogRef      = useRef(
+    isRemount && session.glossLog?.length ? [...session.glossLog] : []
   );
-  const midQuizFiredRef  = useRef(!!midQuizResults); // already fired if returning
+  const wasGlossedRef    = useRef(
+    isRemount && session.wasGlossed
+      ? { ...session.wasGlossed }
+      : Object.fromEntries(Object.keys(TARGET_KANJI).map(k => [k, false]))
+  );
+  const midQuizFiredRef  = useRef(true); // always true on remount — quiz already fired
+  const pendingMidQuizRef = useRef(null);
 
   // ── Gloss interaction state ───────────────────────────────────────────────
   // Group A
@@ -68,19 +78,20 @@ export default function ReadingPage({
   // ── 1. Start session + load text ─────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      // Start thesis session
-      try {
-        await axios.post(`${API_BASE}/api/thesis/session/start`, {
-          participant_id: participantId,
-          group,
-          session_id: sessionId,
-        });
-      } catch (e) {
-        console.error('Failed to start thesis session:', e);
+      // Only start a new session on first mount, not on remount after mid-quiz
+      if (!isRemount) {
+        try {
+          await axios.post(`${API_BASE}/api/thesis/session/start`, {
+            participant_id: participantId,
+            group,
+            session_id: sessionId,
+          });
+        } catch (e) {
+          console.error('Failed to start thesis session:', e);
+        }
       }
 
-      // Send text directly as a UTF-8 blob — same as V3's pasted text flow.
-      // This avoids any server filesystem dependency.
+      // Always reload the text (wordData is lost on unmount regardless)
       try {
         const blob = new Blob([READING_TEXT], { type: 'text/plain' });
         const formData = new FormData();
@@ -155,23 +166,9 @@ export default function ReadingPage({
       console.error('Gloss log failed:', e);
     }
 
-    // Check mid-quiz trigger
+    // Check mid-quiz trigger — store pending, fire after gloss closes
     if (!midQuizFiredRef.current && QUIZ_TRIGGER_WORDS.has(word)) {
-      midQuizFiredRef.current = true;
-      try {
-        await axios.post(`${API_BASE}/api/thesis/session/mid-quiz-triggered`, {
-          session_id: sessionId,
-          trigger_word: word,
-          gloss_index: glossIndex,
-        });
-      } catch (e) {
-        console.error('Mid-quiz trigger log failed:', e);
-      }
-
-      // Delay 2s then fire quiz
-      setTimeout(() => {
-        onMidQuizTriggered({ word, glossIndex, sessionId });
-      }, 2000);
+      pendingMidQuizRef.current = { word, glossIndex };
     }
 
     glossStartTsRef.current = null;
@@ -231,6 +228,8 @@ export default function ReadingPage({
     }
 
     await logGloss(kanji, radicalsClicked ?? []);
+    // Fire mid-quiz 2s after tray closes (Group A)
+    fireDelayedMidQuiz();
   }, [radicalSearchTarget, participantId, appVersion, logGloss]);
 
   const handleRadicalTrayClose = useCallback(() => {
@@ -269,9 +268,38 @@ export default function ReadingPage({
     await logGloss(word, []);
   }, [logGloss]);
 
+  // ── Delayed mid-quiz fire — called after gloss closes in either group ───────
+  const fireDelayedMidQuiz = useCallback(() => {
+    const pending = pendingMidQuizRef.current;
+    if (!pending) return;
+    pendingMidQuizRef.current = null;
+    midQuizFiredRef.current = true;
+
+    // Log to backend (fire-and-forget)
+    axios.post(`${API_BASE}/api/thesis/session/mid-quiz-triggered`, {
+      session_id: sessionId,
+      trigger_word: pending.word,
+      gloss_index: pending.glossIndex,
+    }).catch(e => console.error('Mid-quiz trigger log failed:', e));
+
+    // Show quiz 2s after gloss closes — pass full reading state so App can save it
+    setTimeout(() => {
+      onMidQuizTriggered({
+        word:       pending.word,
+        glossIndex: pending.glossIndex,
+        sessionId,
+        glossLog:   [...glossLogRef.current],
+        wasGlossed: { ...wasGlossedRef.current },
+        glossCount: glossCountRef.current,
+      });
+    }, 2000);
+  }, [sessionId, onMidQuizTriggered]);
+
   const handleGlossDismiss = useCallback(() => {
     setActiveGloss(null);
-  }, []);
+    // Fire mid-quiz 2s after popup closes (Group B)
+    fireDelayedMidQuiz();
+  }, [fireDelayedMidQuiz]);
 
   // ── 6. Unified handleSwipe ────────────────────────────────────────────────
   const handleSwipe = group === 'A' ? handleSwipeA : handleSwipeB;
@@ -324,13 +352,25 @@ export default function ReadingPage({
       <div className="page-inner">
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h3>Reading</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
-              Tap any word you don't know to see more information.
+        <div>
+          <h3 style={{ marginBottom: '0.75rem' }}>Reading</h3>
+
+          {/* Text title block */}
+          <div style={{ marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', letterSpacing: '0.03em', marginBottom: '0.3rem' }}>
+              Excerpt from the Japan Foundation's reading comprehension text
+            </p>
+            <p style={{ fontFamily: 'var(--font-jp)', fontSize: '1.25rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.4, marginBottom: '0.15rem' }}>
+              日本人の大人と漫画
+            </p>
+            <p style={{ fontSize: '0.88rem', color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+              Japanese adults and manga — excerpt discussing why Japanese adults still read manga.
             </p>
           </div>
+
+          <p style={{ fontSize: '0.85rem', color: 'var(--ink-faint)' }}>
+            Tap any word you don't know to see more information.
+          </p>
         </div>
 
         {/* Text */}

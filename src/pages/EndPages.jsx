@@ -129,6 +129,10 @@ export function QuestionnairePage({ participant, session, results, onComplete })
       comprehension:         results.comprehension,
       questionnaire:         questionnaireData,
       was_glossed:           session.wasGlossed,
+      // Which words appeared in each test — for cross-referencing results
+      noticing_test_words:   (session.noticingTestedWords ?? []),
+      kanji_test_words:      results.kanjiTest.map(r => r.word),
+      mid_quiz_word:         results.midQuiz?.trigger_word ?? null,
     };
 
     try {

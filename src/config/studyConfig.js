@@ -18,16 +18,7 @@ export const APP_VERSION_B = 'V3B';
 // The text is embedded here and sent to /analyze as plain text.
 // To change the text: update READING_TEXT below. No server file needed.
 
-export const READING_TEXT = `日本人の大人と漫画
-「どうして日本では、子どもだけでなくて大人たちも漫画を読んでいるのか。」と言う外国人の声を耳にすることがよくある。確かに、電車の中で漫画雑誌に夢中になっている大人を見るのは、珍しいことではない。特に、20代、30代の大人たちが多いようだ。彼らは、なぜ、大人になっても漫画を読んでいるのか、そして、彼らが読んでいる漫画とはどんなものなのか、考えてみたい。
-
-まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。簡単に手に入れられて簡単に読むことができるので、毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。
-
-また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。
-
-そして、読者をひきつけるために一番大切な、内容の面白さという点も、忘れることはできない。漫画をあまり読まない人たちの中には、漫画は低俗だとか、内容が乏しいと思っている人もいるが、実際は必ずしもそうとは言えない。話の内容に作者の思想が反映されている作品や、テーマや背景が注意深く調査されていて、読者の知的好奇心を満たすことができる作品も少なくない。そして、読者はそのような作品を読んで、すぐれた映画や小説に出会った時と同じように、感動したり、共感を覚えたりするのである。
-
-若い大人たちにとって、漫画は子どものころから身近な存在だった。そして、彼らが大人になった今、このような漫画の特徴は以前よりもずっと広く認識されているし、また支持されるようにもなっている。漫画は、これからも多くの人たちに読まれていくだろう。`;
+export const READING_TEXT = `まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。簡単に手に入れられて簡単に読むことができるので、毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。そして、読者をひきつけるために一番大切な、内容の面白さという点も、忘れることはできない。`;
 
 // ── Target kanji ──────────────────────────────────────────────────────────────
 // 11 words tracked for is_target_word and was_glossed.
@@ -39,40 +30,59 @@ export const TARGET_KANJI = {
     meaning: 'manga, comic',
     acceptedMeanings: ['manga', 'comic', 'comic book', 'comics'],
     difficulty: 'easy',
-    paragraph: 1,
     testKanji: '漫',
     otherKanji: '画',
-    exampleSentence: '「どうして日本では、子どもだけでなくて大人たちも漫画を読んでいるのか。」と言う外国人の声を耳にすることがよくある。',
+    blankDisplay: '[–]画',
+    exampleSentence: 'まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。',
   },
-  '珍しい': {
-    reading: 'めずらしい',
-    meaning: 'rare, unusual',
-    acceptedMeanings: ['rare', 'unusual', 'uncommon', 'strange'],
+  '便利': {
+    reading: 'べんり',
+    meaning: 'convenient',
+    acceptedMeanings: ['convenient', 'handy', 'useful', 'convenience'],
     difficulty: 'easy',
-    paragraph: 1,
-    testKanji: '珍',
-    otherKanji: null,
-    // Single-kanji word — blank is just [–]
-    exampleSentence: '電車の中で漫画雑誌に夢中になっている大人を見るのは、珍しいことではない。',
+    testKanji: '便',
+    otherKanji: '利',
+    blankDisplay: '[–]利',
+    exampleSentence: 'まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。',
   },
-  '夢中': {
-    reading: 'むちゅう',
-    meaning: 'absorbed in, engrossed',
-    acceptedMeanings: ['absorbed', 'engrossed', 'crazy about', 'enthusiastic'],
+  '手軽': {
+    reading: 'てがる',
+    meaning: 'easy, casual, simple',
+    acceptedMeanings: ['easy', 'casual', 'simple', 'light', 'effortless'],
     difficulty: 'intermediate',
-    paragraph: 1,
-    testKanji: '夢',
-    otherKanji: '中',
-    exampleSentence: '電車の中で漫画雑誌に夢中になっている大人を見るのは、珍しいことではない。',
+    testKanji: '軽',
+    otherKanji: '手',
+    blankDisplay: '手[–]',
+    exampleSentence: '毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。',
+  },
+  '手段': {
+    reading: 'しゅだん',
+    meaning: 'means, method',
+    acceptedMeanings: ['means', 'method', 'way', 'measure'],
+    difficulty: 'intermediate',
+    testKanji: '段',
+    otherKanji: '手',
+    blankDisplay: '手[–]',
+    exampleSentence: '毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。',
   },
   '表現': {
     reading: 'ひょうげん',
     meaning: 'expression',
     acceptedMeanings: ['expression', 'representation', 'depiction'],
     difficulty: 'intermediate',
-    paragraph: 3,
-    testKanji: '現',
-    otherKanji: '表',
+    testKanji: '表',
+    otherKanji: '現',
+    blankDisplay: '[–]現',
+    exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
+  },
+  '具体的': {
+    reading: 'ぐたいてき',
+    meaning: 'concrete, specific',
+    acceptedMeanings: ['concrete', 'specific', 'tangible', 'definite'],
+    difficulty: 'intermediate',
+    testKanji: '的',
+    otherKanji: '具体',
+    blankDisplay: '具体[–]',
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
   '読者': {
@@ -80,88 +90,57 @@ export const TARGET_KANJI = {
     meaning: 'reader',
     acceptedMeanings: ['reader', 'readers'],
     difficulty: 'intermediate',
-    paragraph: 3,
     testKanji: '読',
     otherKanji: '者',
+    blankDisplay: '[–]者',
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
-  '作品': {
-    reading: 'さくひん',
-    meaning: 'work, piece',
-    acceptedMeanings: ['work', 'piece', 'artwork', 'creation', 'production'],
+  '理解': {
+    reading: 'りかい',
+    meaning: 'understanding, comprehension',
+    acceptedMeanings: ['understanding', 'comprehension', 'grasp', 'understand'],
     difficulty: 'intermediate',
-    paragraph: 4,
-    testKanji: '品',
-    otherKanji: '作',
-    exampleSentence: '話の内容に作者の思想が反映されている作品や、テーマや背景が注意深く調査されていて、読者の知的好奇心を満たすことができる作品も少なくない。',
+    testKanji: '解',
+    otherKanji: '理',
+    blankDisplay: '理[–]',
+    quizTrigger: true,
+    exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
-  '感動': {
-    reading: 'かんどう',
-    meaning: 'to be moved, deep emotion',
-    acceptedMeanings: ['moved', 'deep emotion', 'emotion', 'impressed', 'touching'],
+  '利点': {
+    reading: 'りてん',
+    meaning: 'advantage, merit',
+    acceptedMeanings: ['advantage', 'merit', 'benefit', 'plus'],
     difficulty: 'intermediate',
-    paragraph: 4,
-    testKanji: '感',
-    otherKanji: '動',
-    midQuizCandidate: true,
-    exampleSentence: '読者はそのような作品を読んで、すぐれた映画や小説に出会った時と同じように、感動したり、共感を覚えたりするのである。',
+    testKanji: '利',
+    otherKanji: '点',
+    blankDisplay: '[–]点',
+    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
   },
-  '低俗': {
-    reading: 'ていぞく',
-    meaning: 'vulgar, lowbrow',
-    acceptedMeanings: ['vulgar', 'lowbrow', 'crude', 'low grade'],
+  '案内書': {
+    reading: 'あんないしょ',
+    meaning: 'guide booklet, brochure',
+    acceptedMeanings: ['guide', 'brochure', 'guidebook', 'guide booklet'],
     difficulty: 'hard',
-    paragraph: 4,
-    testKanji: '俗',
-    otherKanji: '低',
-    exampleSentence: '漫画をあまり読まない人たちの中には、漫画は低俗だとか、内容が乏しいと思っている人もいるが、実際は必ずしもそうとは言えない。',
+    testKanji: '案',
+    otherKanji: '内書',
+    blankDisplay: '[–]内書',
+    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
   },
-  '思想': {
-    reading: 'しそう',
-    meaning: 'thought, ideology',
-    acceptedMeanings: ['thought', 'ideology', 'ideas', 'philosophy'],
+  '説明書': {
+    reading: 'せつめいしょ',
+    meaning: 'instruction manual',
+    acceptedMeanings: ['instruction manual', 'manual', 'instructions', 'guide'],
     difficulty: 'hard',
-    paragraph: 4,
-    testKanji: '思',
-    otherKanji: '想',
-    exampleSentence: '話の内容に作者の思想が反映されている作品や、テーマや背景が注意深く調査されていて、読者の知的好奇心を満たすことができる作品も少なくない。',
-  },
-  '反映': {
-    reading: 'はんえい',
-    meaning: 'reflection, to reflect',
-    acceptedMeanings: ['reflection', 'reflect', 'mirror'],
-    difficulty: 'hard',
-    paragraph: 4,
-    testKanji: '映',
-    otherKanji: '反',
-    exampleSentence: '話の内容に作者の思想が反映されている作品や、テーマや背景が注意深く調査されていて、読者の知的好奇心を満たすことができる作品も少なくない。',
-  },
-  '認識': {
-    reading: 'にんしき',
-    meaning: 'recognition, awareness',
-    acceptedMeanings: ['recognition', 'awareness', 'understanding', 'realisation', 'realization'],
-    difficulty: 'hard',
-    paragraph: 5,
-    testKanji: '認',
-    otherKanji: '識',
+    testKanji: '説',
+    otherKanji: '明書',
+    blankDisplay: '[–]明書',
     quizTrigger: true,
-    exampleSentence: 'このような漫画の特徴は以前よりもずっと広く認識されているし、また支持されるようにもなっている。',
-  },
-  '特徴': {
-    reading: 'とくちょう',
-    meaning: 'characteristic, feature',
-    acceptedMeanings: ['characteristic', 'feature', 'trait', 'quality'],
-    difficulty: 'hard',
-    paragraph: 5,
-    testKanji: '徴',
-    otherKanji: '特',
-    quizTrigger: true,
-    exampleSentence: 'このような漫画の特徴は以前よりもずっと広く認識されているし、また支持されるようにもなっている。',
+    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
   },
 };
 
 // Mid-quiz trigger words — first gloss of any of these fires the mid-reading quiz
-export const QUIZ_TRIGGER_WORDS = new Set(['特徴', '認識']);
+export const QUIZ_TRIGGER_WORDS = new Set(['説明書', '理解']);
 
 // ── Comprehension questions ───────────────────────────────────────────────────
 // Fixed, identical for all participants.
@@ -169,36 +148,36 @@ export const QUIZ_TRIGGER_WORDS = new Set(['特徴', '認識']);
 export const COMPREHENSION_QUESTIONS = [
   {
     index: 0,
-    question: 'What practical advantage of manga is mentioned first in the text?',
+    question: 'What advantage of manga is described first in the text?',
     options: [
-      { key: 'a', text: 'Manga is cheap compared to novels' },
-      { key: 'b', text: 'Manga can be read easily during commuting' },
-      { key: 'c', text: 'Manga is educational for children' },
-      { key: 'd', text: 'Manga is usually very short' },
+      { key: 'a', text: 'Manga is cheaper than regular books' },
+      { key: 'b', text: 'Manga can be read while standing on a train' },
+      { key: 'c', text: 'Manga is available at all bookstores' },
+      { key: 'd', text: 'Manga takes less time to read than novels' },
     ],
     correctAnswer: 'b',
   },
   {
     index: 1,
-    question: 'What is the main point of this text?',
+    question: 'According to the text, why is manga with pictures easier to understand than text-only books?',
     options: [
-      { key: 'a', text: 'Manga should replace novels in modern society' },
-      { key: 'b', text: 'Manga is mainly for relaxation, not serious thinking' },
-      { key: 'c', text: 'Manga continues to be popular among adults because of its accessibility and depth' },
-      { key: 'd', text: 'Manga is more popular in Japan than in other countries' },
+      { key: 'a', text: 'Manga uses simpler vocabulary' },
+      { key: 'b', text: 'Manga has fewer pages' },
+      { key: 'c', text: 'Pictures help readers form concrete mental images' },
+      { key: 'd', text: 'Manga stories are shorter and easier to follow' },
     ],
     correctAnswer: 'c',
   },
   {
     index: 2,
-    question: 'Which age group is said to read manga particularly often?',
+    question: 'What recent development does the text mention?',
     options: [
-      { key: 'a', text: 'Teenagers' },
-      { key: 'b', text: 'People over 60' },
-      { key: 'c', text: "People in their 20s and 30s" },
-      { key: 'd', text: 'Children only' },
+      { key: 'a', text: 'Manga has become popular in other countries' },
+      { key: 'b', text: 'Company guides and instruction manuals are increasingly written in manga format' },
+      { key: 'c', text: 'Manga artists are now creating content for schools' },
+      { key: 'd', text: 'Manga has replaced textbooks at universities' },
     ],
-    correctAnswer: 'c',
+    correctAnswer: 'b',
   },
 ];
 

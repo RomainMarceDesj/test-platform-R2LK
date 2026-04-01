@@ -104,6 +104,28 @@ export default function OnboardingPage({ onComplete }) {
           </button>
         </form>
 
+        {/* Instructions */}
+        <div className="card-sm" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <h3>Before you begin</h3>
+          <p style={{ fontSize: '0.9rem', color: 'var(--ink)', lineHeight: 1.65 }}>
+            Please read the following carefully:
+          </p>
+          <ul style={{ paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', color: 'var(--ink-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <li>
+              <strong style={{ color: 'var(--ink)' }}>No outside help.</strong>{' '}
+              Do not use a dictionary, translation app, or any other external resource during the study. The glossing tool provided is the only help you should use.
+            </li>
+            <li>
+              <strong style={{ color: 'var(--ink)' }}>Complete in one sitting.</strong>{' '}
+              Please do not pause the session partway through. The whole study takes approximately 15–20 minutes — set aside uninterrupted time before starting.
+            </li>
+            <li>
+              <strong style={{ color: 'var(--ink)' }}>Read naturally.</strong>{' '}
+              There are no right or wrong answers in most sections. We are interested in your natural reading experience, not your ability to memorise vocabulary.
+            </li>
+          </ul>
+        </div>
+
         {/* Footer note */}
         <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--ink-faint)' }}>
           No personal data is collected beyond your participant ID.

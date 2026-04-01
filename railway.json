@@ -5,7 +5,7 @@
     "buildCommand": "npm install --include=dev && npm run build"
   },
   "deploy": {
-    "startCommand": "npx vite preview --host 0.0.0.0 --port $PORT",
+    "startCommand": "node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0 --port $PORT",
     "healthcheckPath": "/"
   }
 }
