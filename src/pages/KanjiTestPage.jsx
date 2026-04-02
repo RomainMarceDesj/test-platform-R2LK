@@ -63,9 +63,9 @@ function ReadingRecognitionQ({ word, config, allWords, onAnswer }) {
     return (
       <div style={{ textAlign: 'center', padding: '1rem' }}>
         <span style={{ fontFamily: 'var(--font-jp)', fontSize: '2.5rem' }}>{word}</span>
-        <p style={{ marginTop: '1rem', color: 'var(--ink-faint)' }}>No reading data available for this word.</p>
+        <p style={{ marginTop: '1rem', color: 'var(--ink-faint)' }}>No data available for this word.</p>
         <button className="btn btn-secondary" style={{ marginTop: '1rem' }}
-          onClick={() => onAnswer({ word, question_type: 'reading', answer_given: 'skip', correct_answer: '', is_correct: false })}>
+          onClick={() => onAnswer({ word, question_type: 'reading', answer_given: 'no_data', correct_answer: null, is_correct: null, skipped: true })}>
           Skip →
         </button>
       </div>
@@ -120,9 +120,9 @@ function MeaningRecognitionQ({ word, config, allWords, onAnswer }) {
     return (
       <div style={{ textAlign: 'center', padding: '1rem' }}>
         <span style={{ fontFamily: 'var(--font-jp)', fontSize: '2.5rem' }}>{word}</span>
-        <p style={{ marginTop: '1rem', color: 'var(--ink-faint)' }}>No meaning data available for this word.</p>
+        <p style={{ marginTop: '1rem', color: 'var(--ink-faint)' }}>No data available for this word.</p>
         <button className="btn btn-secondary" style={{ marginTop: '1rem' }}
-          onClick={() => onAnswer({ word, question_type: 'meaning', answer_given: 'skip', correct_answer: '', is_correct: false })}>
+          onClick={() => onAnswer({ word, question_type: 'meaning', answer_given: 'no_data', correct_answer: null, is_correct: null, skipped: true })}>
           Skip →
         </button>
       </div>
