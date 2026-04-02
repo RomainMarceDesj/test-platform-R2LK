@@ -204,25 +204,31 @@ export default function ReadingPage({
     setShowRadicalSearch(true);
   }, [wordData]);
 
-  // ── Delayed mid-quiz fire — called after gloss closes in either group ───────
-  const fireDelayedMidQuiz = useCallback(() => {
-    const pending = pendingMidQuizRef.current;
-    if (!pending) return;
+  // ── Delayed mid-quiz fire — called directly from close action in either group
+  // Accepts optional explicit word/glossIndex for cases where pending ref may not be set yet
+  const fireDelayedMidQuiz = useCallback((explicitWord, explicitIdx) => {
+    // Use explicit args first (from confirm/X buttons), then fall back to pending ref
+    const word       = explicitWord ?? pendingMidQuizRef.current?.word;
+    const glossIndex = explicitIdx  ?? pendingMidQuizRef.current?.glossIndex;
+
+    if (!word) return;
+    if (midQuizFiredRef.current) return; // already fired
+
     pendingMidQuizRef.current = null;
     midQuizFiredRef.current = true;
 
     // Log to backend (fire-and-forget)
     axios.post(`${API_BASE}/api/thesis/session/mid-quiz-triggered`, {
       session_id: sessionId,
-      trigger_word: pending.word,
-      gloss_index: pending.glossIndex,
+      trigger_word: word,
+      gloss_index: glossIndex ?? 0,
     }).catch(e => console.error('Mid-quiz trigger log failed:', e));
 
-    // Show quiz 2s after gloss closes — pass full reading state so App can save it
+    // Show quiz 2s after gloss closes
     setTimeout(() => {
       onMidQuizTriggered({
-        word:       pending.word,
-        glossIndex: pending.glossIndex,
+        word,
+        glossIndex,
         sessionId,
         glossLog:   [...glossLogRef.current],
         wasGlossed: { ...wasGlossedRef.current },
@@ -255,8 +261,12 @@ export default function ReadingPage({
     }
 
     await logGloss(kanji, radicalsClicked ?? []);
-    // Fire mid-quiz 2s after tray closes (Group A)
-    fireDelayedMidQuiz();
+    // Fire mid-quiz 2s after tray closes (Group A) — pass word explicitly
+    if (QUIZ_TRIGGER_WORDS.has(kanji) && !midQuizFiredRef.current) {
+      fireDelayedMidQuiz(kanji, glossCountRef.current);
+    } else {
+      fireDelayedMidQuiz(); // handles any pending from logGloss
+    }
   }, [radicalSearchTarget, participantId, appVersion, logGloss, fireDelayedMidQuiz]);
 
   const handleRadicalTrayClose = useCallback(() => {
@@ -298,10 +308,15 @@ export default function ReadingPage({
 
 
   const handleGlossDismiss = useCallback(() => {
+    const closingWord = activeGloss?.kanji;
     setActiveGloss(null);
-    // Fire mid-quiz 2s after popup closes (Group B)
-    fireDelayedMidQuiz();
-  }, [fireDelayedMidQuiz]);
+    // Fire mid-quiz 2s after popup closes (Group B) — pass word explicitly
+    if (closingWord && QUIZ_TRIGGER_WORDS.has(closingWord) && !midQuizFiredRef.current) {
+      fireDelayedMidQuiz(closingWord, glossCountRef.current);
+    } else {
+      fireDelayedMidQuiz(); // handles any pending from logGloss
+    }
+  }, [fireDelayedMidQuiz, activeGloss]);
 
   // ── 6. Unified handleSwipe ────────────────────────────────────────────────
   const handleSwipe = group === 'A' ? handleSwipeA : handleSwipeB;

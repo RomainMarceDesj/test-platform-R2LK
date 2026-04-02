@@ -125,7 +125,7 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
         const [browseRes, breakdownRes] = await Promise.all([
           axios.post(`${API_BASE}/api/radicals/browse-filtered`, {
             target_kanji: targetChar,
-            window_size: 5,
+            window_size: 2,
           }),
           axios.post(`${API_BASE}/api/radicals/for-kanji`, { word: targetChar }),
         ]);
@@ -252,56 +252,53 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
 
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-          {/* Question */}
-          <div>
-            <h2>
-              What radicals can you remember seeing in the kanji for{' '}
-              {displayMeaning
-                ? <span style={{ color: 'var(--accent)' }}>"{displayMeaning}"</span>
-                : <span style={{ fontFamily: 'var(--font-jp)', color: 'var(--accent)' }}>{currentWord}</span>
-              }
-            </h2>
-            {compoundDisplay && (
-              <div style={{ marginTop: '0.5rem' }}>{compoundDisplay}</div>
-            )}
-          </div>
-
-          {/* Sentence context */}
-          {itemData?.sentence && (
-            <div style={{
-              background: 'var(--paper-warm)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.75rem 1rem',
-              fontSize: '0.85rem',
-              fontFamily: 'var(--font-jp)',
-              color: 'var(--ink-muted)',
-              lineHeight: 1.8,
-            }}>
-              <SentenceWithBlank
-                sentence={itemData.sentence}
-                fullWord={itemData.fullWord ?? currentWord}
-                blankDisplay={itemData.blankDisplay ?? '[–]'}
-              />
-            </div>
-          )}
-
-          <div className="divider" />
-
-          {/* Radical selector */}
+          {/* Show nothing until itemData is fully loaded — prevents word flash */}
           {loadingItem ? (
-            <p style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '1rem' }}>
+            <p style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '2rem' }}>
               Loading…
             </p>
           ) : (
-            <RadicalSelector
-              candidateRadicals={itemData?.radicals ?? []}
-              onSubmit={handleItemSubmit}
-              submitLabel={
-                currentIdx + 1 < orderedItems.length
-                  ? 'Next →'
-                  : 'Continue to vocabulary test →'
-              }
-            />
+            <>
+              {/* Question */}
+              <div>
+                <h2>
+                  What radicals can you remember seeing in the kanji for{' '}
+                  <span style={{ color: 'var(--accent)' }}>"{displayMeaning}"</span>
+                </h2>
+                <div style={{ marginTop: '0.5rem' }}>{compoundDisplay}</div>
+              </div>
+
+              {/* Sentence context */}
+              {itemData?.sentence && (
+                <div style={{
+                  background: 'var(--paper-warm)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.85rem',
+                  fontFamily: 'var(--font-jp)',
+                  color: 'var(--ink-muted)',
+                  lineHeight: 1.8,
+                }}>
+                  <SentenceWithBlank
+                    sentence={itemData.sentence}
+                    fullWord={itemData.fullWord ?? currentWord}
+                    blankDisplay={itemData.blankDisplay ?? '[–]'}
+                  />
+                </div>
+              )}
+
+              <div className="divider" />
+
+              <RadicalSelector
+                candidateRadicals={itemData?.radicals ?? []}
+                onSubmit={handleItemSubmit}
+                submitLabel={
+                  currentIdx + 1 < orderedItems.length
+                    ? 'Next →'
+                    : 'Continue to vocabulary test →'
+                }
+              />
+            </>
           )}
 
         </div>

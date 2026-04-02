@@ -14,7 +14,7 @@ import ReadingPage      from './pages/ReadingPage';
 import MidQuizPage      from './pages/MidQuizPage';
 import RadicalNoticingTest from './pages/RadicalNoticingTest';
 import KanjiTestPage    from './pages/KanjiTestPage';
-import { ComprehensionPage, QuestionnairePage, DonePage } from './pages/EndPages';
+import { QuestionnairePage, DonePage } from './pages/EndPages';
 import './App.css';
 
 // ── Phase constants ───────────────────────────────────────────────────────────
@@ -27,7 +27,6 @@ export const PHASES = {
   MID_QUIZ:          'mid_quiz',
   RADICAL_NOTICING:  'radical_noticing',
   KANJI_TEST:        'kanji_test',
-  COMPREHENSION:     'comprehension',
   QUESTIONNAIRE:     'questionnaire',
   DONE:              'done',
 };
@@ -115,11 +114,6 @@ export default function App() {
 
   const handleKanjiTestComplete = useCallback((kanjiResults) => {
     setResults(prev => ({ ...prev, kanjiTest: kanjiResults }));
-    setPhase(PHASES.COMPREHENSION);
-  }, []);
-
-  const handleComprehensionComplete = useCallback((comprehensionResults) => {
-    setResults(prev => ({ ...prev, comprehension: comprehensionResults }));
     setPhase(PHASES.QUESTIONNAIRE);
   }, []);
 
@@ -189,13 +183,6 @@ export default function App() {
           participant={participant}
           session={session}
           onComplete={handleKanjiTestComplete}
-        />
-      );
-
-    case PHASES.COMPREHENSION:
-      return (
-        <ComprehensionPage
-          onComplete={handleComprehensionComplete}
         />
       );
 

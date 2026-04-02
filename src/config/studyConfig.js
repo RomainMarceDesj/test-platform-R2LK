@@ -18,7 +18,7 @@ export const APP_VERSION_B = 'V3B';
 // The text is embedded here and sent to /analyze as plain text.
 // To change the text: update READING_TEXT below. No server file needed.
 
-export const READING_TEXT = `まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。簡単に手に入れられて簡単に読むことができるので、毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。そして、読者をひきつけるために一番大切な、内容の面白さという点も、忘れることはできない。`;
+export const READING_TEXT = `また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。`;
 
 // ── Target kanji ──────────────────────────────────────────────────────────────
 // 11 words tracked for is_target_word and was_glossed.
@@ -33,37 +33,27 @@ export const TARGET_KANJI = {
     testKanji: '漫',
     otherKanji: '画',
     blankDisplay: '[–]画',
-    exampleSentence: 'まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。',
+    exampleSentence: 'また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。',
   },
-  '便利': {
-    reading: 'べんり',
-    meaning: 'convenient',
-    acceptedMeanings: ['convenient', 'handy', 'useful', 'convenience'],
+  '絵': {
+    reading: 'え',
+    meaning: 'picture, drawing',
+    acceptedMeanings: ['picture', 'drawing', 'illustration', 'image', 'painting'],
     difficulty: 'easy',
-    testKanji: '便',
-    otherKanji: '利',
-    blankDisplay: '[–]利',
-    exampleSentence: 'まず、漫画は、駅で買って電車の中で立ったまま読めるという便利さがある。',
+    testKanji: '絵',
+    otherKanji: null,
+    blankDisplay: '[–]',
+    exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
-  '手軽': {
-    reading: 'てがる',
-    meaning: 'easy, casual, simple',
-    acceptedMeanings: ['easy', 'casual', 'simple', 'light', 'effortless'],
-    difficulty: 'intermediate',
-    testKanji: '軽',
-    otherKanji: '手',
-    blankDisplay: '手[–]',
-    exampleSentence: '毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。',
-  },
-  '手段': {
-    reading: 'しゅだん',
-    meaning: 'means, method',
-    acceptedMeanings: ['means', 'method', 'way', 'measure'],
-    difficulty: 'intermediate',
-    testKanji: '段',
-    otherKanji: '手',
-    blankDisplay: '手[–]',
-    exampleSentence: '毎日仕事で忙しい人たちにとっては、最も手軽なリラックスの手段だと言えるだろう。',
+  '内容': {
+    reading: 'ないよう',
+    meaning: 'content, substance',
+    acceptedMeanings: ['content', 'contents', 'substance', 'detail', 'details'],
+    difficulty: 'easy',
+    testKanji: '内',
+    otherKanji: '容',
+    blankDisplay: '[–]容',
+    exampleSentence: 'また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。',
   },
   '表現': {
     reading: 'ひょうげん',
@@ -103,13 +93,22 @@ export const TARGET_KANJI = {
     testKanji: '解',
     otherKanji: '理',
     blankDisplay: '理[–]',
-    quizTrigger: true,
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
+  },
+  '最近': {
+    reading: 'さいきん',
+    meaning: 'recently, lately',
+    acceptedMeanings: ['recently', 'lately', 'these days', 'recent'],
+    difficulty: 'intermediate',
+    testKanji: '最',
+    otherKanji: '近',
+    blankDisplay: '[–]近',
+    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
   },
   '利点': {
     reading: 'りてん',
     meaning: 'advantage, merit',
-    acceptedMeanings: ['advantage', 'merit', 'benefit', 'plus'],
+    acceptedMeanings: ['advantage', 'merit', 'benefit', 'plus', 'strong point'],
     difficulty: 'intermediate',
     testKanji: '利',
     otherKanji: '点',
@@ -124,6 +123,7 @@ export const TARGET_KANJI = {
     testKanji: '案',
     otherKanji: '内書',
     blankDisplay: '[–]内書',
+    quizTrigger: true,
     exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
   },
   '説明書': {
@@ -140,7 +140,7 @@ export const TARGET_KANJI = {
 };
 
 // Mid-quiz trigger words — first gloss of any of these fires the mid-reading quiz
-export const QUIZ_TRIGGER_WORDS = new Set(['説明書', '理解']);
+export const QUIZ_TRIGGER_WORDS = new Set(['案内書', '説明書']);
 
 // ── Comprehension questions ───────────────────────────────────────────────────
 // Fixed, identical for all participants.

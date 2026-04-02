@@ -1,100 +1,21 @@
 /**
- * ComprehensionPage.jsx, QuestionnairePage.jsx, DonePage.jsx
- * ============================================================
- * Phases 6, 7, and 8.
+ * EndPages.jsx — QuestionnairePage + DonePage
+ * (ComprehensionPage removed — replaced by comments field in questionnaire)
  */
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ComprehensionPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-import { COMPREHENSION_QUESTIONS, LIKERT_QUESTIONS, USE_CONTEXT_OPTIONS, API_BASE } from '../config/studyConfig';
-
-export function ComprehensionPage({ onComplete }) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [selected, setSelected]     = useState(null);
-  const [results, setResults]       = useState([]);
-
-  const q = COMPREHENSION_QUESTIONS[currentIdx];
-
-  const handleSelect = (key) => {
-    if (selected !== null) return; // already answered
-    setSelected(key);
-
-    const result = {
-      question_index: q.index,
-      answer_given:   key,
-      correct_answer: q.correctAnswer,
-      is_correct:     key === q.correctAnswer,
-    };
-
-    setTimeout(() => {
-      const newResults = [...results, result];
-      if (currentIdx + 1 < COMPREHENSION_QUESTIONS.length) {
-        setResults(newResults);
-        setCurrentIdx(prev => prev + 1);
-        setSelected(null);
-      } else {
-        onComplete(newResults);
-      }
-    }, 600);
-  };
-
-  return (
-    <div className="page">
-      <div className="page-inner animate-in">
-
-        <div>
-          <h3>Reading comprehension — {currentIdx + 1} / {COMPREHENSION_QUESTIONS.length}</h3>
-          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
-            {COMPREHENSION_QUESTIONS.map((_, i) => (
-              <div key={i} className={`progress-dot ${i < currentIdx ? 'done' : i === currentIdx ? 'active' : ''}`} />
-            ))}
-          </div>
-        </div>
-
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <h2 style={{ lineHeight: 1.4 }}>{q.question}</h2>
-
-          <div className="mc-options">
-            {q.options.map((opt, i) => {
-              let cls = '';
-              if (selected === opt.key) {
-                cls = opt.key === q.correctAnswer ? 'correct' : 'incorrect';
-              }
-              return (
-                <button
-                  key={opt.key}
-                  className={`mc-option ${selected === opt.key ? 'selected' : ''} ${cls}`}
-                  onClick={() => handleSelect(opt.key)}
-                  disabled={selected !== null}
-                >
-                  <span className="mc-key">{opt.key.toUpperCase()}</span>
-                  <span style={{ fontSize: '0.95rem' }}>{opt.text}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-export default ComprehensionPage;
-
+import { LIKERT_QUESTIONS, USE_CONTEXT_OPTIONS, API_BASE } from '../config/studyConfig';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// QuestionnairePage.jsx
+// QuestionnairePage
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function QuestionnairePage({ participant, session, results, onComplete }) {
   const [likert, setLikert]       = useState({});
   const [contexts, setContexts]   = useState(new Set());
   const [otherText, setOtherText] = useState('');
+  const [comments, setComments]   = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]         = useState('');
 
@@ -116,9 +37,9 @@ export function QuestionnairePage({ participant, session, results, onComplete })
       likert,
       future_use_contexts: Array.from(contexts),
       future_use_other:    otherText.trim() || null,
+      comments:            comments.trim() || null,
     };
 
-    // Build full results payload
     const payload = {
       participant_id:        participant.participantId,
       group:                 participant.group,
@@ -126,10 +47,8 @@ export function QuestionnairePage({ participant, session, results, onComplete })
       mid_quiz:              results.midQuiz,
       kanji_test:            results.kanjiTest,
       radical_noticing_test: results.radicalNoticingTest,
-      comprehension:         results.comprehension,
       questionnaire:         questionnaireData,
       was_glossed:           session.wasGlossed,
-      // Which words appeared in each test — for cross-referencing results
       noticing_test_words:   (session.noticingTestedWords ?? []),
       kanji_test_words:      results.kanjiTest.map(r => r.word),
       mid_quiz_word:         results.midQuiz?.trigger_word ?? null,
@@ -160,7 +79,7 @@ export function QuestionnairePage({ participant, session, results, onComplete })
 
         <div className="card">
           <div className="likert-group">
-            {LIKERT_QUESTIONS.map((q, i) => (
+            {LIKERT_QUESTIONS.map((q) => (
               <div key={q.id} className="likert-item">
                 <div className="likert-question">{q.text}</div>
                 <div className="likert-scale">
@@ -187,7 +106,7 @@ export function QuestionnairePage({ participant, session, results, onComplete })
         <div className="card-sm">
           <div className="form-group">
             <label className="form-label" style={{ marginBottom: '0.5rem' }}>
-              In what contexts would you use a tool like this?{' '}
+              In what contexts would you use a tool like this?{'  '}
               <span>Select all that apply</span>
             </label>
             <div className="option-group">
@@ -217,6 +136,40 @@ export function QuestionnairePage({ participant, session, results, onComplete })
           </div>
         </div>
 
+        {/* Open comments */}
+        <div className="card-sm">
+          <div className="form-group">
+            <label className="form-label">
+              Comments on your experience or the system
+              <span> — optional</span>
+            </label>
+            <textarea
+              value={comments}
+              onChange={e => setComments(e.target.value.slice(0, 1000))}
+              placeholder="Any thoughts, difficulties, or suggestions are welcome…"
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '0.7rem 0.9rem',
+                border: '1px solid var(--paper-border)',
+                borderRadius: 'var(--radius-md)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.95rem',
+                fontWeight: 300,
+                color: 'var(--ink)',
+                background: 'white',
+                resize: 'vertical',
+                outline: 'none',
+                boxSizing: 'border-box',
+                lineHeight: 1.6,
+              }}
+            />
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', textAlign: 'right' }}>
+              {comments.length} / 1000
+            </p>
+          </div>
+        </div>
+
         {error && (
           <p style={{ color: 'var(--accent)', fontSize: '0.875rem' }}>{error}</p>
         )}
@@ -234,9 +187,8 @@ export function QuestionnairePage({ participant, session, results, onComplete })
   );
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
-// DonePage.jsx
+// DonePage
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function DonePage({ participant }) {
@@ -244,7 +196,6 @@ export function DonePage({ participant }) {
     <div className="page" style={{ justifyContent: 'center', textAlign: 'center' }}>
       <div className="page-inner animate-in" style={{ alignItems: 'center', gap: '1.5rem' }}>
 
-        {/* Stamp mark */}
         <div style={{
           width: 80, height: 80,
           borderRadius: '50%',

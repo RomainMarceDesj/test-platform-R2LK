@@ -217,8 +217,8 @@ function RadicalSearchTray({
         <span className="target-kanji-large">{targetKanji}</span>
       </div>
 
-      {/* Selected candidates + confirm — shown above search/browse */}
-      {selectedCandidates.length > 0 && (
+      {/* Selected candidates + confirm — hidden in browse mode to save space */}
+      {selectedCandidates.length > 0 && viewMode === 'search' && (
         <div className="selected-candidates-section">
           <div className="section-label">
             Your Selection ({selectedCandidates.length}/{kanjiCount}):
@@ -258,8 +258,11 @@ function RadicalSearchTray({
             ))}
           </div>
 
+          <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: '0.4rem' }}>
+            {selectedCandidates.length} / {kanjiCount} kanji selected
+          </p>
           <button className="check-answer-button" onClick={handleConfirm}>
-            ✅ These are the correct kanji
+            Check kanji match ✓
           </button>
         </div>
       )}
@@ -348,7 +351,7 @@ function RadicalSearchTray({
                     {gi > 0 && <div className="group-separator" />}
                     <div className="radical-chips-container">
                       {group.radicals.map((r, i) => (
-                        <div key={i} className="radical-chip" onClick={() => handleRadicalSelect(r)}>
+                        <div key={i} className="browse-radical-chip">
                           <span className="radical-character">{r.radical}</span>
                           <span className="radical-meaning">{r.english_names?.slice(0, 2).join(' / ') || r.primary_english}</span>
                         </div>
@@ -370,7 +373,7 @@ function RadicalSearchTray({
                       <div className="stroke-label">{sc} stroke{sc > 1 ? 's' : ''}:</div>
                       <div className="radical-chips-container">
                         {group.map((r, i) => (
-                          <div key={i} className="radical-chip" onClick={() => handleRadicalSelect(r)}>
+                          <div key={i} className="browse-radical-chip">
                             <span className="radical-character">{r.radical}</span>
                             <span className="radical-meaning">{r.primary_english}</span>
                           </div>

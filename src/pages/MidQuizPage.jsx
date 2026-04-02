@@ -93,7 +93,7 @@ export default function MidQuizPage({
         const [browseRes, breakdownRes] = await Promise.all([
           axios.post(`${API_BASE}/api/radicals/browse-filtered`, {
             target_kanji: char,
-            window_size: 5,
+            window_size: 2,
           }),
           axios.post(`${API_BASE}/api/radicals/for-kanji`, {
             word: char,
