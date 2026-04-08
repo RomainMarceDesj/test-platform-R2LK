@@ -78,6 +78,9 @@ export default function OnboardingPage({ onComplete }) {
             <label className="form-label" htmlFor="pid">
               Participant ID
               <span> — provided by the researcher</span>
+              <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '4px' }}>
+                Please do not use your first name, last name, or any combination of them as your ID.
+              </span>
             </label>
             <input
               id="pid"
@@ -128,7 +131,7 @@ export default function OnboardingPage({ onComplete }) {
 
         {/* Footer note */}
         <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--ink-faint)' }}>
-          No personal data is collected beyond your participant ID.
+          The only personal data collected is your participant ID and the contact information you provide in the background questionnaire. Contact details will be used solely to notify you of the second part of this study.
         </p>
 
       </div>

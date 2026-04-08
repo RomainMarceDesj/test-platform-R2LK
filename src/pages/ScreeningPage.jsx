@@ -94,6 +94,27 @@ const JLPT_OPTIONS = [
   { key: 'N1',    label: 'N1 (highest level)' },
 ];
 
+const TIME_IN_JAPAN = [
+  { key: 'not_in_japan', label: 'Does not live in Japan' },
+  { key: '0_1y',         label: '0 – 1 year' },
+  { key: '1_2y',         label: '1 – 2 years' },
+  { key: '3_5y',         label: '3 – 5 years' },
+  { key: '5y_plus',      label: '5 or more years' },
+];
+
+const RADICAL_FAMILIARITY = [
+  { key: '1', label: 'Not at all familiar',
+    desc: 'I have never heard of kanji radicals' },
+  { key: '2', label: 'Slightly familiar',
+    desc: 'I have heard of radicals but know very little about them' },
+  { key: '3', label: 'Somewhat familiar',
+    desc: 'I know what radicals are and recognise a few' },
+  { key: '4', label: 'Quite familiar',
+    desc: 'I can identify many radicals and know their general meanings' },
+  { key: '5', label: 'Very familiar',
+    desc: 'I actively use radicals as part of my kanji study strategy' },
+];
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ScreeningPage({ participantId, onComplete }) {
@@ -104,6 +125,9 @@ export default function ScreeningPage({ participantId, onComplete }) {
     jlpt_attempted:        '',
     fluent_kanji_language: '',
     studied_kanji_other:   '',
+    time_in_japan:         '',
+    radical_familiarity:   '',
+    contact_info:          '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -215,7 +239,7 @@ export default function ScreeningPage({ participantId, onComplete }) {
           {/* Q5 — Fluency in kanji language */}
           <div className="form-group">
             <label className="form-label">
-              Are you fluent in a language that uses kanji characters?
+              Do you already have a mastery of kanji characters from a language you are fluent in?
               <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
                 e.g. Chinese (Mandarin, Cantonese, etc.) or Korean
               </span>
@@ -236,6 +260,58 @@ export default function ScreeningPage({ participantId, onComplete }) {
             <BoolGroup
               value={form.studied_kanji_other}
               onChange={set('studied_kanji_other')}
+            />
+          </div>
+
+          <div className="divider" />
+
+          {/* Q7 — Time living in Japan */}
+          <div className="form-group">
+            <label className="form-label">
+              How long have you lived in Japan?
+            </label>
+            <RadioGroup
+              options={TIME_IN_JAPAN}
+              value={form.time_in_japan}
+              onChange={set('time_in_japan')}
+            />
+          </div>
+
+          <div className="divider" />
+
+          {/* Q8 — Radical familiarity */}
+          <div className="form-group">
+            <label className="form-label">
+              How familiar are you with kanji radicals?
+              <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
+                Radicals are the building-block components that kanji characters are made from
+              </span>
+            </label>
+            <RadioGroup
+              options={RADICAL_FAMILIARITY}
+              value={form.radical_familiarity}
+              onChange={set('radical_familiarity')}
+            />
+          </div>
+
+          <div className="divider" />
+
+          {/* Q9 — Contact information */}
+          <div className="form-group">
+            <label className="form-label">
+              Contact information
+              <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
+                We will use this only to notify you when the second part of this study is ready. An email address is preferred.
+              </span>
+            </label>
+            <input
+              type="text"
+              value={form.contact_info}
+              onChange={e => setForm(prev => ({ ...prev, contact_info: e.target.value }))}
+              placeholder="e.g. yourname@example.com"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
 
