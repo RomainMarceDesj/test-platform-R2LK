@@ -192,9 +192,6 @@ export default function ScreeningPage({ participantId, onComplete }) {
           <div className="form-group">
             <label className="form-label">
               What is your current overall level in Japanese?
-              <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
-                Consider your speaking, listening, reading, and writing together
-              </span>
             </label>
             <RadioGroup
               options={OVERALL_LEVEL}
@@ -209,9 +206,6 @@ export default function ScreeningPage({ participantId, onComplete }) {
           <div className="form-group">
             <label className="form-label">
               How well can you read Japanese text?
-              <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
-                1 = cannot read at all, 5 = can read almost any text
-              </span>
             </label>
             <RadioGroup
               options={READING_LEVEL}
@@ -225,7 +219,7 @@ export default function ScreeningPage({ participantId, onComplete }) {
           {/* Q4 — JLPT */}
           <div className="form-group">
             <label className="form-label">
-              What is the highest JLPT level you have attempted?
+              What is the last JLPT level you have attempted, or plan to attempt?
             </label>
             <RadioGroup
               options={JLPT_OPTIONS}
@@ -241,7 +235,7 @@ export default function ScreeningPage({ participantId, onComplete }) {
             <label className="form-label">
               Do you already have a mastery of kanji characters from a language you are fluent in?
               <span style={{ display: 'block', fontWeight: 300, fontSize: '0.82rem', color: 'var(--ink-faint)', marginTop: '2px' }}>
-                e.g. Chinese (Mandarin, Cantonese, etc.) or Korean
+                e.g. Chinese (Mandarin, Cantonese, etc.) 
               </span>
             </label>
             <BoolGroup

@@ -148,10 +148,10 @@ function ClassicGloss({ word, position, onGloss, onDismiss, glossIndex, userId, 
                 {(entry.on?.length > 0 || entry.kun?.length > 0) && (
                   <div className="gloss-kanji-readings">
                     {entry.on?.length > 0 && (
-                      <span className="gloss-reading-tag on">音 {entry.on.join('・')}</span>
+                      <span className="gloss-reading-tag on">on {entry.on.join('・')}</span>
                     )}
                     {entry.kun?.length > 0 && (
-                      <span className="gloss-reading-tag kun">訓 {entry.kun.join('・')}</span>
+                      <span className="gloss-reading-tag kun">kun {entry.kun.join('・')}</span>
                     )}
                   </div>
                 )}
