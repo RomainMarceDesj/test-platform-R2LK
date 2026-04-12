@@ -54,6 +54,7 @@ export default function MidQuizPage({
   const [blankDisplay, setBlankDisplay] = useState(staticConfig?.blankDisplay ?? '');
   const [reading, setReading]           = useState(staticConfig?.reading ?? '');
   const [meaning, setMeaning]           = useState(staticConfig?.meaning ?? '');
+  const [kanjiMeaning, setKanjiMeaning] = useState(staticConfig?.kanjiMeaning ?? '');
   const [sentence, setSentence]         = useState(staticConfig?.exampleSentence ?? '');
 
   const [radicals, setRadicals]         = useState([]);
@@ -116,9 +117,7 @@ export default function MidQuizPage({
 
         setRadicals(allCandidates);
         setCorrectDirect(Array.from(directSet));
-        setCorrectIndirect(
-          allCandidates.filter(r => !r.is_direct).map(r => r.radical)
-        );
+        setCorrectIndirect([]);
 
       } catch (e) {
         console.error('MidQuiz data load failed:', e);
@@ -197,9 +196,9 @@ export default function MidQuizPage({
           <h3 style={{ marginBottom: '0.4rem' }}>Quick check</h3>
           <h2>
             What radicals can you remember seeing in the kanji for{' '}
-            {meaning
-              ? <span style={{ color: 'var(--accent)' }}>"{meaning}"</span>
-              : <span style={{ fontFamily: 'var(--font-jp)', color: 'var(--accent)' }}>{midQuizWord}</span>
+            {kanjiMeaning
+              ? <span style={{ color: 'var(--accent)' }}>"{kanjiMeaning}"</span>
+              : <span style={{ fontFamily: 'var(--font-jp)', color: 'var(--accent)' }}>{targetChar}</span>
             }
           </h2>
           <div style={{ marginTop: '0.5rem' }}>{compoundDisplay}</div>

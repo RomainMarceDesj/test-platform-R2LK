@@ -28,6 +28,7 @@ export const TARGET_KANJI = {
   '漫画': {
     reading: 'まんが',
     meaning: 'manga, comic',
+    kanjiMeaning: 'overflow, manga',
     acceptedMeanings: ['manga', 'comic', 'comic book', 'comics'],
     difficulty: 'easy',
     testKanji: '漫',
@@ -38,6 +39,7 @@ export const TARGET_KANJI = {
   '絵': {
     reading: 'え',
     meaning: 'picture, drawing',
+    kanjiMeaning: 'picture, drawing',
     acceptedMeanings: ['picture', 'drawing', 'illustration', 'image', 'painting'],
     difficulty: 'easy',
     testKanji: '絵',
@@ -48,6 +50,7 @@ export const TARGET_KANJI = {
   '内容': {
     reading: 'ないよう',
     meaning: 'content, substance',
+    kanjiMeaning: 'inside, within',
     acceptedMeanings: ['content', 'contents', 'substance', 'detail', 'details'],
     difficulty: 'easy',
     testKanji: '内',
@@ -58,6 +61,7 @@ export const TARGET_KANJI = {
   '表現': {
     reading: 'ひょうげん',
     meaning: 'expression',
+    kanjiMeaning: 'surface, express',
     acceptedMeanings: ['expression', 'representation', 'depiction'],
     difficulty: 'intermediate',
     testKanji: '表',
@@ -68,6 +72,7 @@ export const TARGET_KANJI = {
   '具体的': {
     reading: 'ぐたいてき',
     meaning: 'concrete, specific',
+    kanjiMeaning: 'target, -like',
     acceptedMeanings: ['concrete', 'specific', 'tangible', 'definite'],
     difficulty: 'intermediate',
     testKanji: '的',
@@ -78,6 +83,7 @@ export const TARGET_KANJI = {
   '読者': {
     reading: 'どくしゃ',
     meaning: 'reader',
+    kanjiMeaning: 'read',
     acceptedMeanings: ['reader', 'readers'],
     difficulty: 'intermediate',
     testKanji: '読',
@@ -88,6 +94,7 @@ export const TARGET_KANJI = {
   '理解': {
     reading: 'りかい',
     meaning: 'understanding, comprehension',
+    kanjiMeaning: 'explain, solve',
     acceptedMeanings: ['understanding', 'comprehension', 'grasp', 'understand'],
     difficulty: 'intermediate',
     testKanji: '解',
@@ -98,6 +105,7 @@ export const TARGET_KANJI = {
   '最近': {
     reading: 'さいきん',
     meaning: 'recently, lately',
+    kanjiMeaning: 'most, extreme',
     acceptedMeanings: ['recently', 'lately', 'these days', 'recent'],
     difficulty: 'intermediate',
     testKanji: '最',
@@ -108,6 +116,7 @@ export const TARGET_KANJI = {
   '利点': {
     reading: 'りてん',
     meaning: 'advantage, merit',
+    kanjiMeaning: 'profit, benefit',
     acceptedMeanings: ['advantage', 'merit', 'benefit', 'plus', 'strong point'],
     difficulty: 'intermediate',
     testKanji: '利',
@@ -118,6 +127,7 @@ export const TARGET_KANJI = {
   '案内書': {
     reading: 'あんないしょ',
     meaning: 'guide booklet, brochure',
+    kanjiMeaning: 'proposal, idea',
     acceptedMeanings: ['guide', 'brochure', 'guidebook', 'guide booklet'],
     difficulty: 'hard',
     testKanji: '案',
@@ -129,6 +139,7 @@ export const TARGET_KANJI = {
   '説明書': {
     reading: 'せつめいしょ',
     meaning: 'instruction manual',
+    kanjiMeaning: 'explanation, theory',
     acceptedMeanings: ['instruction manual', 'manual', 'instructions', 'guide'],
     difficulty: 'hard',
     testKanji: '説',

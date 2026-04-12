@@ -144,19 +144,14 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
           }
         }
 
-        const indirectRadicals = allCandidates
-          .filter(r => !r.is_direct)
-          .map(r => r.radical);
-
-        const configRef = TARGET_KANJI[currentWord];
         setItemData({
           radicals:        allCandidates,
           correctDirect:   Array.from(directSet),
-          correctIndirect: indirectRadicals,
+          correctIndirect: [],
           sentence:        dynamicSentence,
           reading:         dynamicReading,
           meaning:         dynamicMeaning,
-          blankDisplay:    configRef?.blankDisplay ?? ('[–]' + (currentWord.slice(1) || '')),
+          blankDisplay:    config?.blankDisplay ?? ('[–]' + (currentWord.slice(1) || '')),
           fullWord:        currentWord,
         });
       } catch (e) {
