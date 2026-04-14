@@ -115,6 +115,14 @@ const RADICAL_FAMILIARITY = [
     desc: 'I actively use radicals as part of my kanji study strategy' },
 ];
 
+const KANJI_ENJOYMENT = [
+  { key: '1', label: 'I dislike learning kanji' },
+  { key: '2', label: 'I somewhat dislike learning kanji' },
+  { key: '3', label: 'I neither like nor dislike learning kanji' },
+  { key: '4', label: 'I somewhat enjoy learning kanji' },
+  { key: '5', label: 'I enjoy learning kanji' },
+];
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ScreeningPage({ participantId, onComplete }) {
@@ -128,6 +136,7 @@ export default function ScreeningPage({ participantId, onComplete }) {
     time_in_japan:         '',
     radical_familiarity:   '',
     contact_info:          '',
+    kanji_enjoyment:       '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -306,6 +315,20 @@ export default function ScreeningPage({ participantId, onComplete }) {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
+            />
+          </div>
+
+          <div className="divider" />
+
+          {/* Q10 — Kanji enjoyment */}
+          <div className="form-group">
+            <label className="form-label">
+              Do you enjoy learning kanji?
+            </label>
+            <RadioGroup
+              options={KANJI_ENJOYMENT}
+              value={form.kanji_enjoyment}
+              onChange={set('kanji_enjoyment')}
             />
           </div>
 
