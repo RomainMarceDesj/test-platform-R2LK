@@ -33,7 +33,7 @@ function RadicalSearchTray({
   const [filteredRadicalGroups, setFilteredRadicalGroups] = useState([]);
   const [useFilteredBrowse, setUseFilteredBrowse] = useState(true);
   const [viewMode, setViewMode]                 = useState('search');
-  const [expandedKanji, setExpandedKanji]       = useState(null);
+
   const [kanjiRadicalDetails, setKanjiRadicalDetails] = useState({});
   const [kanjiInfo, setKanjiInfo]               = useState({});
 
@@ -166,12 +166,6 @@ function RadicalSearchTray({
     }
   };
 
-  const handleSelectedKanjiClick = (kanji) => {
-    if (expandedKanji === kanji) { setExpandedKanji(null); return; }
-    setExpandedKanji(kanji);
-    fetchKanjiDetails(kanji);
-  };
-
   const handleConfirm = () => {
     // Pass both the selected kanji AND the full list of radicals ever clicked
     onSuccess(selectedCandidates.join(''), radicalsClickedRef.current);
@@ -211,92 +205,70 @@ function RadicalSearchTray({
 
       <button className="tray-close-btn" onClick={handleClose}>✕</button>
 
+      {/* Selected candidates + confirm — hidden in browse mode to save space */}
+      {selectedCandidates.length > 0 && viewMode === 'search' && (
+        <div className="selected-candidates-section">
+          <div className="section-label">
+            Your Selection ({selectedCandidates.length}/{kanjiCount}):
+          </div>
+          <div className="selected-candidates-display">
+            {selectedCandidates.map((kanji, i) => (
+              <div key={i} className="selected-candidate-entry">
+                <div className="selected-candidate-char">
+                  <span className="candidate-kanji-char">{kanji}</span>
+                  {kanjiInfo[kanji] && (
+                    <span className="candidate-kanji-readings">
+                      {kanjiInfo[kanji].meaning && <span className="kanji-meaning">{kanjiInfo[kanji].meaning}</span>}
+                      <span className="kanji-readings-row">
+                        {kanjiInfo[kanji].kun[0] && <span className="reading-tag kun">Kun: {kanjiInfo[kanji].kun[0]}</span>}
+                        {kanjiInfo[kanji].on[0]  && <span className="reading-tag on">On: {kanjiInfo[kanji].on[0]}</span>}
+                      </span>
+                    </span>
+                  )}
+                </div>
+                {kanjiRadicalDetails[kanji] && (() => {
+                  const byStroke = {};
+                  for (const r of kanjiRadicalDetails[kanji]) {
+                    const sc = r.stroke_count ?? 0;
+                    if (!byStroke[sc]) byStroke[sc] = [];
+                    byStroke[sc].push(r);
+                  }
+                  return (
+                    <div className="candidate-radical-reveal">
+                      {Object.keys(byStroke).sort((a, b) => a - b).map(sc => (
+                        <div key={sc} className="reveal-stroke-group">
+                          <span className="reveal-stroke-label">{sc} stroke{sc > 1 ? 's' : ''}</span>
+                          <div className="reveal-stroke-chips">
+                            {byStroke[sc].map((r, j) => (
+                              <span key={j} className="reveal-radical-chip">
+                                <span className="radical-character">{r.radical}</span>
+                                <span className="radical-meaning">{r.english_names?.slice(0, 2).join(' / ')}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: '0.4rem' }}>
+            {selectedCandidates.length} / {kanjiCount} kanji selected
+          </p>
+          <button className="check-answer-button" onClick={handleConfirm}>
+            Check kanji match ✓
+          </button>
+        </div>
+      )}
+
       {/* Target word */}
       <div className="target-kanji-display">
         <span className="target-label">Find the kanji in:</span>
         <span className="target-kanji-large">{targetKanji}</span>
       </div>
-
-      {/* Selected candidates + confirm — hidden in browse mode to save space */}
-      {selectedCandidates.length > 0 && viewMode === 'search' && (
-        <div className="selected-candidates-section">
-          <div className="section-label">
-            Your Selection:&nbsp;
-            <span style={{
-              fontWeight: 700,
-              color: selectedCandidates.length === kanjiCount ? '#2d6a4f' : 'var(--accent)',
-            }}>
-              {selectedCandidates.length} / {kanjiCount}
-            </span>
-          </div>
-          <p style={{ fontSize: '0.78rem', color: '#185fa5', marginBottom: '0.5rem' }}>
-            Tap a selected kanji to see its radicals · tap ✕ to remove
-          </p>
-          <div className="selected-candidates-display">
-            {selectedCandidates.map((kanji, i) => (
-              <div key={i} className="selected-candidate-entry">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <div
-                    className={`selected-candidate-char clickable ${expandedKanji === kanji ? 'expanded' : ''}`}
-                    onClick={() => handleSelectedKanjiClick(kanji)}
-                    style={{ flex: 1 }}
-                  >
-                    <span className="candidate-kanji-char">{kanji}</span>
-                    {kanjiInfo[kanji] && (
-                      <span className="candidate-kanji-readings">
-                        {kanjiInfo[kanji].meaning && <span className="kanji-meaning">{kanjiInfo[kanji].meaning}</span>}
-                        <span className="kanji-readings-row">
-                          {kanjiInfo[kanji].kun[0] && <span className="reading-tag kun">Kun: {kanjiInfo[kanji].kun[0]}</span>}
-                          {kanjiInfo[kanji].on[0]  && <span className="reading-tag on">On: {kanjiInfo[kanji].on[0]}</span>}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedCandidates(prev => prev.filter(k => k !== kanji));
-                      if (expandedKanji === kanji) setExpandedKanji(null);
-                    }}
-                    aria-label={`Remove ${kanji}`}
-                    style={{
-                      flexShrink: 0,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      color: 'var(--ink-faint)',
-                      padding: '4px 6px',
-                      borderRadius: 'var(--radius-sm)',
-                      lineHeight: 1,
-                    }}
-                  >✕</button>
-                </div>
-                {expandedKanji === kanji && kanjiRadicalDetails[kanji] && (
-                  <div className="candidate-radical-reveal">
-                    {kanjiRadicalDetails[kanji].map((r, j) => (
-                      <span key={j} className="reveal-radical-chip">
-                        <span className="radical-character">{r.radical}</span>
-                        <span className="radical-meaning">{r.english_names?.slice(0, 2).join(' / ')}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            className="check-answer-button"
-            onClick={handleConfirm}
-            disabled={selectedCandidates.length !== kanjiCount}
-            style={{ opacity: selectedCandidates.length !== kanjiCount ? 0.45 : 1, cursor: selectedCandidates.length !== kanjiCount ? 'not-allowed' : 'pointer' }}
-          >
-            {selectedCandidates.length === kanjiCount
-              ? 'Check kanji match ✓'
-              : `Select ${kanjiCount - selectedCandidates.length} more kanji`}
-          </button>
-        </div>
-      )}
 
       {/* Mode toggle */}
       <div className="mode-toggle">
@@ -435,7 +407,7 @@ function RadicalSearchTray({
                 👆 Click to select kanji (select {kanjiCount} character{kanjiCount > 1 ? 's' : ''})
               </div>
               <div className="candidate-kanji-grid">
-                {[...candidateKanji].sort().slice(0, 5).map((kanji, i) => (
+                {[...candidateKanji].sort().slice(0, 50).map((kanji, i) => (
                   <div
                     key={i}
                     className={`candidate-kanji ${selectedCandidates.includes(kanji) ? 'selected-candidate' : ''}`}
@@ -445,8 +417,8 @@ function RadicalSearchTray({
                     {selectedCandidates.includes(kanji) && <span className="selected-indicator">✓</span>}
                   </div>
                 ))}
-                {candidateCount > 5 && (
-                  <div className="more-results">+{candidateCount - 5} more — try adding another radical to narrow down</div>
+                {candidateCount > 50 && (
+                  <div className="more-results">+{candidateCount - 50} more…</div>
                 )}
               </div>
             </>

@@ -51,6 +51,7 @@ export function QuestionnairePage({ participant, session, results, onComplete })
       was_glossed:           session.wasGlossed,
       noticing_test_words:   (session.noticingTestedWords ?? []),
       kanji_test_words:      results.kanjiTest.map(r => r.word),
+      inline_comprehension:  session.inlineComprehension ?? null,
       mid_quiz_word:         results.midQuiz?.trigger_word ?? null,
     };
 

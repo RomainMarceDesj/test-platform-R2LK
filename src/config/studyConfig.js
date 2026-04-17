@@ -18,7 +18,7 @@ export const APP_VERSION_B = 'V3B';
 // The text is embedded here and sent to /analyze as plain text.
 // To change the text: update READING_TEXT below. No server file needed.
 
-export const READING_TEXT = `また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。`;
+export const READING_TEXT = `また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。`;
 
 // ── Target kanji ──────────────────────────────────────────────────────────────
 // 11 words tracked for is_target_word and was_glossed.
@@ -28,7 +28,6 @@ export const TARGET_KANJI = {
   '漫画': {
     reading: 'まんが',
     meaning: 'manga, comic',
-    kanjiMeaning: 'overflow, manga',
     acceptedMeanings: ['manga', 'comic', 'comic book', 'comics'],
     difficulty: 'easy',
     testKanji: '漫',
@@ -39,7 +38,6 @@ export const TARGET_KANJI = {
   '絵': {
     reading: 'え',
     meaning: 'picture, drawing',
-    kanjiMeaning: 'picture, drawing',
     acceptedMeanings: ['picture', 'drawing', 'illustration', 'image', 'painting'],
     difficulty: 'easy',
     testKanji: '絵',
@@ -50,8 +48,7 @@ export const TARGET_KANJI = {
   '内容': {
     reading: 'ないよう',
     meaning: 'content, substance',
-    kanjiMeaning: 'inside, within',
-    acceptedMeanings: ['content', 'contents', 'substance', 'detail', 'details'],
+    acceptedMeanings: ['content', 'contents', 'substance', 'detail'],
     difficulty: 'easy',
     testKanji: '内',
     otherKanji: '容',
@@ -61,7 +58,6 @@ export const TARGET_KANJI = {
   '表現': {
     reading: 'ひょうげん',
     meaning: 'expression',
-    kanjiMeaning: 'surface, express',
     acceptedMeanings: ['expression', 'representation', 'depiction'],
     difficulty: 'intermediate',
     testKanji: '表',
@@ -72,18 +68,17 @@ export const TARGET_KANJI = {
   '具体的': {
     reading: 'ぐたいてき',
     meaning: 'concrete, specific',
-    kanjiMeaning: 'target, -like',
     acceptedMeanings: ['concrete', 'specific', 'tangible', 'definite'],
     difficulty: 'intermediate',
     testKanji: '的',
     otherKanji: '具体',
     blankDisplay: '具体[–]',
+    quizTrigger: true,
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
   '読者': {
     reading: 'どくしゃ',
     meaning: 'reader',
-    kanjiMeaning: 'read',
     acceptedMeanings: ['reader', 'readers'],
     difficulty: 'intermediate',
     testKanji: '読',
@@ -94,64 +89,33 @@ export const TARGET_KANJI = {
   '理解': {
     reading: 'りかい',
     meaning: 'understanding, comprehension',
-    kanjiMeaning: 'explain, solve',
     acceptedMeanings: ['understanding', 'comprehension', 'grasp', 'understand'],
     difficulty: 'intermediate',
     testKanji: '解',
     otherKanji: '理',
     blankDisplay: '理[–]',
+    quizTrigger: true,
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
-  },
-  '最近': {
-    reading: 'さいきん',
-    meaning: 'recently, lately',
-    kanjiMeaning: 'most, extreme',
-    acceptedMeanings: ['recently', 'lately', 'these days', 'recent'],
-    difficulty: 'intermediate',
-    testKanji: '最',
-    otherKanji: '近',
-    blankDisplay: '[–]近',
-    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
-  },
-  '利点': {
-    reading: 'りてん',
-    meaning: 'advantage, merit',
-    kanjiMeaning: 'profit, benefit',
-    acceptedMeanings: ['advantage', 'merit', 'benefit', 'plus', 'strong point'],
-    difficulty: 'intermediate',
-    testKanji: '利',
-    otherKanji: '点',
-    blankDisplay: '[–]点',
-    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
-  },
-  '案内書': {
-    reading: 'あんないしょ',
-    meaning: 'guide booklet, brochure',
-    kanjiMeaning: 'proposal, idea',
-    acceptedMeanings: ['guide', 'brochure', 'guidebook', 'guide booklet'],
-    difficulty: 'hard',
-    testKanji: '案',
-    otherKanji: '内書',
-    blankDisplay: '[–]内書',
-    quizTrigger: true,
-    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
-  },
-  '説明書': {
-    reading: 'せつめいしょ',
-    meaning: 'instruction manual',
-    kanjiMeaning: 'explanation, theory',
-    acceptedMeanings: ['instruction manual', 'manual', 'instructions', 'guide'],
-    difficulty: 'hard',
-    testKanji: '説',
-    otherKanji: '明書',
-    blankDisplay: '[–]明書',
-    quizTrigger: true,
-    exampleSentence: '最近では、この利点を生かして、会社や商品の案内書や説明書など、漫画で書かれているものが多くなった。',
   },
 };
 
 // Mid-quiz trigger words — first gloss of any of these fires the mid-reading quiz
-export const QUIZ_TRIGGER_WORDS = new Set(['案内書', '説明書']);
+export const QUIZ_TRIGGER_WORDS = new Set(['理解', '具体的']);
+
+// ── Inline reading comprehension question (shown at bottom of reading page) ──
+// This gates the Finish Reading button and is saved to thesis_results.
+export const READING_INLINE_QUESTION = {
+  question: 'According to this paragraph, what is it that makes manga special?',
+  correctAnswer: 'c',
+  options: [
+    { key: 'a', text: 'Manga are written to be engaging to a wide audience, including adults' },
+    { key: 'b', text: 'Manga can be purchased easily at convenience stores and train stations' },
+    { key: 'c', text: 'The presence of pictures makes for clear mental images' },
+    { key: 'd', text: 'Manga are easy to read on the go such as in the train' },
+    { key: 'e', text: 'I do not know' },
+  ],
+};
+
 
 // ── Comprehension questions ───────────────────────────────────────────────────
 // Fixed, identical for all participants.

@@ -6,8 +6,6 @@
  */
 
 import React, { useState } from 'react';
-import RadicalSearchTray from '../components/RadicalSearchTray';
-import { API_BASE } from '../config/studyConfig';
 
 function Step({ title, children }) {
   return (
@@ -194,12 +192,14 @@ function TutorialB({ onComplete }) {
 function TutorialA({ onComplete }) {
   const [step, setStep]                   = useState(0);
   const [tapped, setTapped]               = useState(false);
-  const [confirmedKanji, setConfirmedKanji] = useState('');
+  const [searchVal, setSearchVal]         = useState('');
+  const [radicalPicked, setRadicalPicked] = useState(false);
+  const [kanjiPicked, setKanjiPicked]     = useState(false);
 
-  const handleSuccess = (selectedKanji) => {
-    setConfirmedKanji(selectedKanji);
-    setStep(2);
-  };
+  // 駅 contains 馬 (horse) — search trigger
+  const showResults = searchVal.toLowerCase().includes('hors') ||
+                      searchVal.toLowerCase().includes('uma') ||
+                      searchVal === '馬';
 
   return (
     <div className="page">
@@ -211,9 +211,19 @@ function TutorialA({ onComplete }) {
 
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
+          {/* Tutorial video */}
+          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', aspectRatio: '9/16', width: '100%', maxWidth: '320px', alignSelf: 'center', background: '#000' }}>
+            <iframe
+              src="https://www.youtube.com/embed/xD3Hete9AiM?rel=0&modestbranding=1"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            />
+          </div>
+
           {/* Progress dots */}
           <div style={{ display: 'flex', gap: '0.4rem' }}>
-            {[0,1,2].map(i => (
+            {[0,1,2,3].map(i => (
               <div key={i} className={`progress-dot ${i < step ? 'done' : i === step ? 'active' : ''}`} />
             ))}
           </div>
@@ -221,7 +231,7 @@ function TutorialA({ onComplete }) {
           {/* Step 0 — tap a word */}
           {step === 0 && (
             <Step title="Tap a word you want to look up">
-              <p>When you see a kanji word you don't know, tap it. A search panel will open to help you identify it.</p>
+              <p>When you see a kanji word you don't know, tap it. A panel will open to help you identify it.</p>
               <div style={{
                 background: 'var(--paper-warm)',
                 borderRadius: 'var(--radius-md)',
@@ -244,36 +254,99 @@ function TutorialA({ onComplete }) {
             </Step>
           )}
 
-          {/* Step 1 — use the real tray */}
+          {/* Step 1 — search a radical */}
           {step === 1 && (
-            <Step title="Search for a radical to narrow it down">
+            <Step title="Search for a radical by name">
               <p>
-                Identify the kanji by searching for its <strong>radicals</strong> — the visual components it is built from.
-                Type a radical name in English to search, then select it. The tool will show you kanji that contain it.
+                You identify the kanji by searching for its <strong>radicals</strong> — the visual building blocks it is made of.
               </p>
+              <p>
+                Type a radical name in English. Try <strong>"horse"</strong> — one of the radicals in <span style={{ fontFamily: 'var(--font-jp)' }}>駅</span>.
+              </p>
+              <input
+                type="text"
+                value={searchVal}
+                onChange={e => setSearchVal(e.target.value)}
+                placeholder='Type "horse"…'
+                autoFocus
+              />
+              {showResults && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>Radical found — tap it to add it to your filter:</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[{ r: '馬', n: 'horse' }].map((rad, i) => (
+                      <button
+                        key={i}
+                        className={`radical-chip ${radicalPicked ? 'selected' : ''}`}
+                        onClick={() => { setRadicalPicked(true); setTimeout(() => setStep(2), 350); }}
+                      >
+                        <span className="chip-char" style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem' }}>{rad.r}</span>
+                        <span className="chip-name">{rad.n}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!showResults && searchVal.length > 0 && (
+                <p style={{ fontSize: '0.85rem', color: 'var(--ink-faint)' }}>Keep typing — try "horse"</p>
+              )}
+            </Step>
+          )}
+
+          {/* Step 2 — pick the kanji */}
+          {step === 2 && (
+            <Step title="Select the correct kanji from the candidates">
+              <p>
+                The tool shows kanji that contain that radical. Tap the one that matches the word you saw in the text.
+              </p>
+              <div style={{ background: 'var(--paper-warm)', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-faint)', marginBottom: '0.5rem' }}>
+                  Candidates containing 馬:
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {['駅', '騒', '験', '駆', '騎'].map(k => (
+                    <button
+                      key={k}
+                      onClick={() => {
+                        if (k === '駅') {
+                          setKanjiPicked(true);
+                          setTimeout(() => setStep(3), 400);
+                        }
+                      }}
+                      style={{
+                        fontFamily: 'var(--font-jp)',
+                        fontSize: '1.3rem',
+                        width: '48px',
+                        height: '48px',
+                        border: '1.5px solid var(--paper-border)',
+                        borderRadius: 'var(--radius-md)',
+                        background: kanjiPicked && k === '駅' ? 'var(--accent-light)' : 'white',
+                        outline: kanjiPicked && k === '駅' ? '2px solid var(--accent)' : 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Callout>
-                Try typing <strong>"horse"</strong> — one of the radicals in <span style={{ fontFamily: 'var(--font-jp)' }}>駅</span>.
-                Select the radical, then pick <span style={{ fontFamily: 'var(--font-jp)' }}>駅</span> from the candidates and confirm.
+                Tap <span style={{ fontFamily: 'var(--font-jp)' }}>駅</span> — it's the kanji you saw in the text.
               </Callout>
             </Step>
           )}
 
-          {/* Step 2 — confirmed */}
-          {step === 2 && (
-            <Step title="Reading and meaning are revealed">
+          {/* Step 3 — result revealed */}
+          {step === 3 && (
+            <Step title="The reading and meaning are revealed">
               <p>Once you confirm your selection, the reading and meaning appear. You can tap the same word again anytime to review.</p>
               <div style={{ background: 'var(--paper-warm)', borderRadius: 'var(--radius-md)', padding: '1rem 1.25rem' }}>
-                <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1.5rem', fontWeight: 500, marginBottom: '0.25rem' }}>
-                  {confirmedKanji || '駅'}
+                <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1.5rem', fontWeight: 500, marginBottom: '0.5rem' }}>
+                  駅{' '}
+                  <ruby style={{ fontSize: '0.65em' }}><rt style={{ color: 'var(--ink-muted)' }}>えき</rt></ruby>
                 </div>
-                <div style={{ fontSize: '0.9rem', marginBottom: '0.15rem' }}>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-faint)', marginRight: '0.5rem' }}>Reading</span>
-                  <span style={{ fontFamily: 'var(--font-jp)' }}>えき</span>
-                </div>
-                <div style={{ fontSize: '0.9rem' }}>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-faint)', marginRight: '0.5rem' }}>Meaning</span>
-                  station
-                </div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--ink-muted)' }}>station</div>
               </div>
               <SuccessBanner>Tutorial complete.</SuccessBanner>
               <Callout>Read the text as naturally as you can. Use the tool whenever you encounter a word you don't know.</Callout>
@@ -282,18 +355,7 @@ function TutorialA({ onComplete }) {
 
         </div>
 
-        {/* Real tray — mounted during step 1 */}
-        {step === 1 && (
-          <RadicalSearchTray
-            targetKanji="駅"
-            isOpen={true}
-            onSuccess={handleSuccess}
-            onClose={() => {}}
-            apiBase={API_BASE}
-          />
-        )}
-
-        {step === 2 && (
+        {step === 3 && (
           <button className="btn btn-primary btn-full" onClick={onComplete}>Start reading →</button>
         )}
       </div>

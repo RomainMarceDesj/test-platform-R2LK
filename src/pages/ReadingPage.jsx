@@ -24,6 +24,7 @@ import {
   READING_TEXT,
   TARGET_KANJI,
   QUIZ_TRIGGER_WORDS,
+  READING_INLINE_QUESTION,
 } from '../config/studyConfig';
 
 const MemoizedWord = React.memo(Word);
@@ -61,6 +62,9 @@ export default function ReadingPage({
   );
   const midQuizFiredRef  = useRef(isRemount); // true only when returning after mid-quiz was already completed
   const pendingMidQuizRef = useRef(null);
+
+  // ── Inline comprehension question state ─────────────────────────────────
+  const [inlineAnswer, setInlineAnswer] = useState(null);
 
   // ── Gloss interaction state ───────────────────────────────────────────────
   // Group A
@@ -238,7 +242,7 @@ export default function ReadingPage({
         wasGlossed: { ...wasGlossedRef.current },
         glossCount: glossCountRef.current,
       });
-    }, 2000);
+    }, 1000);
   }, [sessionId, onMidQuizTriggered]);
 
   const handleRadicalTraySuccess = useCallback(async (selectedKanji, radicalsClicked) => {
@@ -328,6 +332,7 @@ export default function ReadingPage({
 
   // ── 7. Finish reading ─────────────────────────────────────────────────────
   const handleFinish = useCallback(async () => {
+    if (!inlineAnswer) return; // gated — must answer inline question
     try {
       await axios.post(`${API_BASE}/api/thesis/session/end`, {
         session_id: sessionId,
@@ -338,10 +343,15 @@ export default function ReadingPage({
 
     onComplete({
       sessionId,
-      glossLog:      glossLogRef.current,
-      wasGlossed:    { ...wasGlossedRef.current },
+      glossLog:   glossLogRef.current,
+      wasGlossed: { ...wasGlossedRef.current },
+      inlineComprehension: {
+        answer_given:   inlineAnswer,
+        correct_answer: READING_INLINE_QUESTION.correctAnswer,
+        is_correct:     inlineAnswer === READING_INLINE_QUESTION.correctAnswer,
+      },
     });
-  }, [sessionId, onComplete]);
+  }, [sessionId, onComplete, inlineAnswer]);
 
   // ── 8. Render ─────────────────────────────────────────────────────────────
 
@@ -410,16 +420,49 @@ export default function ReadingPage({
 
       </div>
 
-      {/* Finish button — fixed bottom */}
-      <div className="reading-footer">
-        <button
-          className="btn btn-primary"
-          onClick={handleFinish}
-          disabled={isLoading}
-        >
-          Finish Reading →
-        </button>
-      </div>
+      {/* Inline comprehension question + gated finish button */}
+      {!isLoading && (
+        <div style={{
+          borderTop: '1px solid var(--paper-border)',
+          marginTop: '1rem',
+          paddingTop: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.85rem',
+          paddingBottom: '1rem',
+        }}>
+          <p style={{ fontSize: '0.95rem', fontWeight: 400, color: 'var(--ink)', lineHeight: 1.5 }}>
+            {READING_INLINE_QUESTION.question}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {READING_INLINE_QUESTION.options.map(opt => (
+              <label
+                key={opt.key}
+                className={`option-item ${inlineAnswer === opt.key ? 'selected' : ''}`}
+                style={{ cursor: 'pointer' }}
+              >
+                <input
+                  type="radio"
+                  checked={inlineAnswer === opt.key}
+                  onChange={() => setInlineAnswer(opt.key)}
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                <span className="option-label" style={{ fontStyle: opt.key === 'e' ? 'italic' : 'normal', opacity: opt.key === 'e' ? 0.7 : 1 }}>
+                  {opt.text}
+                </span>
+              </label>
+            ))}
+          </div>
+          <button
+            className="btn btn-primary btn-full"
+            onClick={handleFinish}
+            disabled={!inlineAnswer}
+            style={{ marginTop: '0.25rem' }}
+          >
+            {inlineAnswer ? 'Finish Reading →' : 'Please answer the question above to continue'}
+          </button>
+        </div>
+      )}
 
       {/* Group A — Radical Search Tray */}
       {group === 'A' && showRadicalSearch && radicalSearchTarget && (
