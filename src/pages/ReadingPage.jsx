@@ -310,9 +310,11 @@ export default function ReadingPage({
     setActiveGloss({ wordId, kanji: clickedWord.kanji, position: pos });
   }, [wordData, activeGloss]);
 
-  const handleGlossOpen = useCallback(async ({ word }) => {
-    await logGloss(word, []);
-  }, [logGloss]);
+  const handleGlossOpen = useCallback(({ word }) => {
+    // Record which word is open (for logging on dismiss)
+    // glossStartTsRef already set by handleSwipeB at open time
+    console.log(`[GROUP-B] Popup opened for "${word}"`);
+  }, []);
 
 
 
@@ -320,12 +322,16 @@ export default function ReadingPage({
     const closingWord = activeGloss?.kanji;
     console.log(`[GROUP-B] Popup dismissed for "${closingWord}". isTrigger=${QUIZ_TRIGGER_WORDS.has(closingWord)} midQuizFired=${midQuizFiredRef.current} pending="${pendingMidQuizRef.current?.word}"`);
     setActiveGloss(null);
+    // Log gloss on CLOSE so gloss_duration_ms captures the full time the popup was open
+    if (closingWord) {
+      logGloss(closingWord, []);
+    }
     if (closingWord && QUIZ_TRIGGER_WORDS.has(closingWord) && !midQuizFiredRef.current) {
       fireDelayedMidQuiz(closingWord, glossCountRef.current);
     } else {
       fireDelayedMidQuiz();
     }
-  }, [fireDelayedMidQuiz, activeGloss]);
+  }, [fireDelayedMidQuiz, activeGloss, logGloss]);
 
   // ── 6. Unified handleSwipe ────────────────────────────────────────────────
   const handleSwipe = group === 'A' ? handleSwipeA : handleSwipeB;
@@ -380,7 +386,7 @@ export default function ReadingPage({
   ));
 
   return (
-    <div className="page" style={{ paddingBottom: '80px' }}>
+    <div className="page reading-manga-bg" style={{ paddingBottom: '80px' }}>
       <div className="page-inner">
 
         {/* Header */}

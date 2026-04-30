@@ -13,7 +13,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import RadicalSelector from '../components/RadicalSelector';
-import { API_BASE, TARGET_KANJI } from '../config/studyConfig';
+import { API_BASE, TARGET_KANJI, NON_TARGET_RADICAL_WORDS } from '../config/studyConfig';
 
 // ── Sentence display — replaces the target kanji char with [–] ───────────────
 
@@ -45,65 +45,41 @@ export default function MidQuizPage({
 }) {
   const midQuizWord = midQuizWordProp ?? session?.midQuizWord ?? '';
 
-  // Static config from TARGET_KANJI (may be undefined for non-target words)
-  const staticConfig = TARGET_KANJI[midQuizWord];
+  // All display values derived directly from hardcoded config — no useState, no fetching
+  const staticConfig   = TARGET_KANJI[midQuizWord] ?? NON_TARGET_RADICAL_WORDS?.[midQuizWord];
+  const targetChar     = staticConfig?.testKanji   ?? midQuizWord?.[0] ?? '';
+  const blankDisplay   = staticConfig?.blankDisplay ?? '';
+  const reading        = staticConfig?.reading      ?? '';
+  const meaning        = staticConfig?.radicalKanjiMeaning ?? staticConfig?.meaning ?? '';
+  const sentence       = staticConfig?.exampleSentence ?? '';
+  const testDisplayLine = staticConfig?.testDisplayLine ?? blankDisplay;
+  const quizHeader     = staticConfig?.midQuizHeader
+    ?? `What radicals did you notice in the kanji for "${meaning}"`;
 
-  // All display state — populated either from staticConfig or fetched dynamically
-  const [targetChar, setTargetChar]     = useState(staticConfig?.testKanji ?? midQuizWord?.[0] ?? '');
-  const [otherKanji, setOtherKanji]     = useState(staticConfig?.otherKanji ?? null);
-  const [blankDisplay, setBlankDisplay] = useState(staticConfig?.blankDisplay ?? '');
-  const [reading, setReading]           = useState(staticConfig?.reading ?? '');
-  const [meaning, setMeaning]           = useState(staticConfig?.meaning ?? '');
-  const [kanjiMeaning, setKanjiMeaning] = useState(staticConfig?.kanjiMeaning ?? '');
-  const [sentence, setSentence]         = useState(staticConfig?.exampleSentence ?? '');
+  const [sentence2, setSentence2] = useState(sentence); // kept for dynamic fallback
+  void setSentence2;
 
   const [radicals, setRadicals]         = useState([]);
   const [correctDirect, setCorrectDirect]   = useState([]);
   const [correctIndirect, setCorrectIndirect] = useState([]);
   const [loading, setLoading]           = useState(true);
 
-  // ── Load word info + radicals ─────────────────────────────────────────────
+  // ── Load radical candidates only (display values are hardcoded above) ────────
   useEffect(() => {
-    if (!midQuizWord) { setLoading(false); return; }
+    if (!midQuizWord || !targetChar) { setLoading(false); return; }
 
     const load = async () => {
       try {
-        const char = staticConfig?.testKanji ?? midQuizWord[0];
-
-        // For non-target words, fetch reading+meaning dynamically
-        if (!staticConfig) {
-          try {
-            const infoRes = await axios.post(`${API_BASE}/get_word_info`, {
-              word: midQuizWord,
-              user_id: participant?.participantId ?? '',
-              app_version: 'thesis',
-            });
-            setReading(infoRes.data.furigana ?? '');
-            setMeaning(infoRes.data.translation ?? '');
-          } catch (e) {
-            console.error('MidQuiz: word info fetch failed', e);
-          }
-          setTargetChar(char);
-          const rest = midQuizWord.slice(1) || null;
-          setOtherKanji(rest);
-          // For unknown words, default to hiding first kanji
-          setBlankDisplay('[–]' + (rest ?? ''));
-        }
-
-        // Fetch radical candidates (±5 window) and breakdown
         const [browseRes, breakdownRes] = await Promise.all([
           axios.post(`${API_BASE}/api/radicals/browse-filtered`, {
-            target_kanji: char,
+            target_kanji: targetChar,
             window_size: 2,
           }),
-          axios.post(`${API_BASE}/api/radicals/for-kanji`, {
-            word: char,
-          }),
+          axios.post(`${API_BASE}/api/radicals/for-kanji`, { word: targetChar }),
         ]);
 
         const breakdown = breakdownRes.data?.[0];
         const directSet = new Set(breakdown?.radicals?.map(r => r.radical) ?? []);
-
         const allCandidates = [];
         const seen = new Set();
         for (const group of browseRes.data?.groups ?? []) {
@@ -114,20 +90,18 @@ export default function MidQuizPage({
             }
           }
         }
-
         setRadicals(allCandidates);
         setCorrectDirect(Array.from(directSet));
-        setCorrectIndirect([]);
-
+        setCorrectIndirect(allCandidates.filter(r => !r.is_direct).map(r => r.radical));
       } catch (e) {
-        console.error('MidQuiz data load failed:', e);
+        console.error('MidQuiz radical load failed:', e);
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [midQuizWord]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [midQuizWord, targetChar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scoring ───────────────────────────────────────────────────────────────
   const scoreResult = (selected) => {
@@ -178,15 +152,7 @@ export default function MidQuizPage({
     );
   }
 
-  const compoundDisplay = (
-    <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem' }}>
-      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{blankDisplay || '[–]'}</span>
-      {' '}
-      <span style={{ fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
-        ({reading}{reading && meaning ? ', ' : ''}{meaning})
-      </span>
-    </span>
-  );
+  // compoundDisplay replaced by hardcoded testDisplayLine
 
   return (
     <div className="quiz-overlay">
@@ -194,14 +160,10 @@ export default function MidQuizPage({
 
         <div>
           <h3 style={{ marginBottom: '0.4rem' }}>Quick check</h3>
-          <h2>
-            What radicals can you remember seeing in the kanji for{' '}
-            {kanjiMeaning
-              ? <span style={{ color: 'var(--accent)' }}>"{kanjiMeaning}"</span>
-              : <span style={{ fontFamily: 'var(--font-jp)', color: 'var(--accent)' }}>{targetChar}</span>
-            }
-          </h2>
-          <div style={{ marginTop: '0.5rem' }}>{compoundDisplay}</div>
+          <h2>{quizHeader}</h2>
+          <div style={{ marginTop: '0.5rem', fontFamily: 'var(--font-jp)', fontSize: '1.05rem', color: 'var(--ink-muted)' }}>
+            in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{testDisplayLine}</span>
+          </div>
         </div>
 
         {/* Sentence context */}

@@ -33,6 +33,10 @@ export const TARGET_KANJI = {
     testKanji: '漫',
     otherKanji: '画',
     blankDisplay: '[–]画',
+    radicalKanjiMeaning: 'cartoon, involuntary',
+    midQuizHeader: 'What radicals did you notice in the kanji for "cartoon, involuntary"',
+    postTestHeader: 'What radicals did you remember in the kanji for "cartoon, involuntary"',
+    testDisplayLine: '[–]画 (まんが, manga, comic)',
     exampleSentence: 'また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。',
   },
   '絵': {
@@ -43,7 +47,11 @@ export const TARGET_KANJI = {
     testKanji: '絵',
     otherKanji: null,
     blankDisplay: '[–]',
-    exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
+    radicalKanjiMeaning: 'drawing, picture',
+    midQuizHeader: 'What radicals did you notice in the kanji for "drawing, picture"',
+    postTestHeader: 'What radicals did you remember in the kanji for "drawing, picture"',
+    testDisplayLine: '「[–]」 (え, picture, drawing)',
+    exampleSentence: 'また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。',
   },
   '内容': {
     reading: 'ないよう',
@@ -73,6 +81,10 @@ export const TARGET_KANJI = {
     testKanji: '的',
     otherKanji: '具体',
     blankDisplay: '具体[–]',
+    radicalKanjiMeaning: 'target, bulls eye',
+    midQuizHeader: 'What radicals did you notice in the kanji for "target, bulls eye"',
+    postTestHeader: 'What radicals did you remember in the kanji for "target, bulls eye"',
+    testDisplayLine: '具体[–] (ぐたいてき, concrete, specific)',
     quizTrigger: true,
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
@@ -94,6 +106,10 @@ export const TARGET_KANJI = {
     testKanji: '解',
     otherKanji: '理',
     blankDisplay: '理[–]',
+    radicalKanjiMeaning: 'explanation, answer',
+    midQuizHeader: 'What radicals did you notice in the kanji for "explanation, answer"',
+    postTestHeader: 'What radicals did you remember in the kanji for "explanation, answer"',
+    testDisplayLine: '理[–] (りかい, understanding, comprehension)',
     quizTrigger: true,
     exampleSentence: '言葉だけによる表現よりも、絵がある方が、具体的なイメージを持つことができるので、読者にとって、理解しやすくなるのである。',
   },
@@ -154,6 +170,76 @@ export const COMPREHENSION_QUESTIONS = [
     ],
     correctAnswer: 'b',
   },
+];
+
+
+// ── Non-target words — radical test data (fallback only) ─────────────────────
+export const NON_TARGET_RADICAL_WORDS = {
+  '持つ': {
+    reading: 'もつ',
+    meaning: 'to hold, to have',
+    testKanji: '持',
+    blankDisplay: '[–]つ',
+    radicalKanjiMeaning: 'hold',
+    postTestHeader: 'What radicals did you remember in the kanji for "hold"',
+    testDisplayLine: '[–]つ (もつ, to hold)',
+    exampleSentence: '絵がある方が、具体的なイメージを持つことができるので…',
+  },
+  '比べて': {
+    reading: 'くらべて',
+    meaning: 'to compare',
+    testKanji: '比',
+    blankDisplay: '[–]べて',
+    radicalKanjiMeaning: 'compare',
+    postTestHeader: 'What radicals did you remember in the kanji for "compare"',
+    testDisplayLine: '[–]べて (くらべて, to compare)',
+    exampleSentence: '字だけの本に比べて、内容がとてもわかりやすい。',
+  },
+  '点': {
+    reading: 'てん',
+    meaning: 'point, spot',
+    testKanji: '点',
+    blankDisplay: '[–]',
+    radicalKanjiMeaning: 'spot, point',
+    postTestHeader: 'What radicals did you remember in the kanji for "spot, point"',
+    testDisplayLine: '[–] (てん, point, spot)',
+    exampleSentence: 'また、漫画は「絵」がある点で、字だけの本に比べて、内容がとてもわかりやすい。',
+  },
+  '字': {
+    reading: 'じ',
+    meaning: 'character, letter',
+    testKanji: '字',
+    blankDisplay: '[–]',
+    radicalKanjiMeaning: 'character, letter',
+    postTestHeader: 'What radicals did you remember in the kanji for "character, letter"',
+    testDisplayLine: '[–] (じ, character, letter)',
+    exampleSentence: '字だけの本に比べて、内容がとてもわかりやすい。',
+  },
+};
+
+
+// ── Word priority order for post-reading test ─────────────────────────────────
+// Words are drawn from this list in order, filtered to only glossed words.
+// 'type' = preferred question type. Equal split is enforced — see KanjiTestPage.
+// Mid-quiz word is excluded from this test (already tested in pop-up quiz).
+
+export const WORD_PRIORITY_ORDER = [
+  // Target words
+  { word: '具体的', type: 'radical' },
+  { word: '理解',   type: 'radical' },
+  { word: '読者',   type: 'reading_meaning' },
+  { word: '表現',   type: 'reading_meaning' },
+  { word: '内容',   type: 'reading_meaning' },
+  { word: '絵',     type: 'radical' },
+  { word: '漫画',   type: 'radical' },
+  // Non-target fallback words (used only if target pool exhausted)
+  { word: '持つ',   type: 'radical' },
+  { word: '比べて', type: 'radical' },
+  { word: '言葉',   type: 'reading_meaning' },
+  { word: '方',     type: 'reading_meaning' },
+  { word: '点',     type: 'radical' },
+  { word: '本',     type: 'reading_meaning' },
+  { word: '字',     type: 'radical' },
 ];
 
 // ── Post-study questionnaire ──────────────────────────────────────────────────
@@ -249,3 +335,53 @@ export const JLPT_OPTIONS = [
 // ── Study intro text ──────────────────────────────────────────────────────────
 
 export const STUDY_INTRO = `This study looks at how people read Japanese text when using a digital reading tool. You will read a short passage in Japanese and answer a few questions about what you read. The whole session takes about 15–20 minutes. There are no right or wrong answers in most sections — we are interested in your natural reading experience. Please read the text as you normally would. After reading, you will answer some questions about the text and the words you encountered.`;
+
+// ── Post-test (2-week follow-up) ──────────────────────────────────────────────
+// Wait period and special-case usernames for the long-term retention follow-up.
+
+// Minimum days between session 1 and post-test eligibility.
+export const POSTTEST_MIN_DAYS = 14;
+
+// Test users who can take the post-test before the wait period elapses.
+// Used during system development. Case-insensitive.
+export const POSTTEST_BYPASS_WAIT_IDS = ['narrow', 'classic'];
+
+// Test user who is always routed straight to the post-test if session 1 data exists.
+// Used to test the post-test flow itself. Case-insensitive.
+export const POSTTEST_FORCE_IDS = ['endtest'];
+
+// Number of "control" target kanji to add to the post-test kanji test.
+// Control items are target kanji the participant did NOT gloss in session 1
+// — they give a within-participant baseline to detect background knowledge growth.
+export const POSTTEST_CONTROL_KANJI_COUNT = 2;
+
+// Post-test introduction shown before the radical noticing phase.
+export const POSTTEST_INTRO_TEXT = `Welcome back. This is a short follow-up to test long-term retention of what you encountered in the first session. The format will feel familiar — radical noticing questions, then a vocabulary test, then a few short questions about what you've been doing in the meantime. The whole thing takes about 5–10 minutes.
+
+Please answer with whatever you remember from the first session, even if you're unsure. Do NOT use a dictionary, translation app, or any other resource — and please don't review the original text before continuing. We are specifically interested in what you retained.`;
+
+// Short post-test questionnaire — captures intervening exposure that could confound results.
+export const POSTTEST_QUESTIONNAIRE = [
+  {
+    id: 'studied_japanese',
+    type: 'yesno',
+    text: 'Did you study Japanese (formally or informally) between the two sessions?',
+  },
+  {
+    id: 'reencountered_kanji',
+    type: 'yesno',
+    text: 'Did you encounter any of the kanji from the first session in any other context (manga, news, classes, etc.) between sessions?',
+  },
+  {
+    id: 'reread_text',
+    type: 'yesno',
+    text: 'Did you re-read or review the study text or its content between sessions?',
+  },
+  {
+    id: 'comments',
+    type: 'text',
+    text: 'Anything else worth noting about the time between sessions?',
+    optional: true,
+    placeholder: 'Optional — any context you think is relevant…',
+  },
+];

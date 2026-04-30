@@ -23,6 +23,7 @@ export default function RadicalSelector({
   const [searchQuery, setSearchQuery]     = useState('');
   const [usedSearch, setUsedSearch]       = useState(false);
   const [searchQueries, setSearchQueries] = useState([]);
+  const [freeText, setFreeText]           = useState('');
 
   const startTimeRef   = useRef(Date.now());
   const searchInputRef = useRef(null);
@@ -85,6 +86,7 @@ export default function RadicalSelector({
       used_search: usedSearch,
       search_queries: searchQueries,
       time_to_submit_ms: timeToSubmitMs,
+      free_text_radicals: freeText.trim() || null,
     });
   };
 
@@ -147,6 +149,39 @@ export default function RadicalSelector({
           {selected.size} radical{selected.size !== 1 ? 's' : ''} selected
         </p>
       )}
+
+      {/* Free-text fallback */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        <label style={{
+          fontSize: '0.82rem',
+          color: 'var(--ink-muted)',
+          lineHeight: 1.5,
+        }}>
+          If you cannot find the radical you are looking for, you can write its name here:
+        </label>
+        <textarea
+          value={freeText}
+          onChange={e => setFreeText(e.target.value.slice(0, 300))}
+          placeholder="e.g. fire, grass, mouth…"
+          rows={2}
+          style={{
+            width: '100%',
+            padding: '0.6rem 0.8rem',
+            border: '1px solid var(--paper-border)',
+            borderRadius: 'var(--radius-md)',
+            fontFamily: 'var(--font-body)',
+            fontSize: '0.9rem',
+            color: 'var(--ink)',
+            background: 'white',
+            resize: 'none',
+            outline: 'none',
+            lineHeight: 1.5,
+            boxSizing: 'border-box',
+          }}
+          onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+          onBlur={e => e.target.style.borderColor = 'var(--paper-border)'}
+        />
+      </div>
 
       {/* Submit */}
       <button className="btn btn-primary btn-full" onClick={handleSubmit}>

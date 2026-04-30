@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import RadicalSelector from '../components/RadicalSelector';
-import { API_BASE, TARGET_KANJI } from '../config/studyConfig';
+import { API_BASE, TARGET_KANJI, NON_TARGET_RADICAL_WORDS } from '../config/studyConfig';
 
 // ── Sentence display (same as MidQuizPage) ────────────────────────────────────
 
@@ -54,11 +54,17 @@ function scoreResult(selected, correctDirect, correctIndirect) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function RadicalNoticingTest({ participant, session, midQuizWord, onComplete }) {
-  const { glossLog, wasGlossed } = session;
+export default function RadicalNoticingTest({ participant, session, midQuizWord, forcedItems, onComplete }) {
+  const { glossLog, wasGlossed } = session ?? {};
 
-  // Build ordered item list: glossed targets first, fall back to any glossed words
+  // Build ordered item list: glossed targets first, fall back to any glossed words.
+  // If forcedItems is provided (post-test path), skip the algorithm and use it directly —
+  // the exact same words from session 1, in the same order, including the mid-quiz word.
   const orderedItems = (() => {
+    if (Array.isArray(forcedItems) && forcedItems.length > 0) {
+      return forcedItems.slice(0, 6); // cap at 6 to leave room for the added mid-quiz word
+    }
+
     const lastGlossIndex = {};
     const allGlossedWords = []; // every word glossed, in order
 
@@ -144,14 +150,19 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
           }
         }
 
+        const indirectRadicals = allCandidates
+          .filter(r => !r.is_direct)
+          .map(r => r.radical);
+
+        const configRef = TARGET_KANJI[currentWord];
         setItemData({
           radicals:        allCandidates,
           correctDirect:   Array.from(directSet),
-          correctIndirect: [],
+          correctIndirect: indirectRadicals,
           sentence:        dynamicSentence,
           reading:         dynamicReading,
           meaning:         dynamicMeaning,
-          blankDisplay:    config?.blankDisplay ?? ('[–]' + (currentWord.slice(1) || '')),
+          blankDisplay:    configRef?.blankDisplay ?? ('[–]' + (currentWord.slice(1) || '')),
           fullWord:        currentWord,
         });
       } catch (e) {
@@ -169,6 +180,7 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
   const handleItemSubmit = ({ selected, used_search, search_queries, time_to_submit_ms }) => {
     const scores = scoreResult(selected, itemData.correctDirect, itemData.correctIndirect);
 
+    const noData = !itemData.correctDirect?.length;
     const itemResult = {
       word:             currentWord,
       target_kanji:     targetChar,
@@ -177,7 +189,8 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
       selected_radicals: selected,
       correct_radicals:  itemData.correctDirect,
       indirect_radicals: itemData.correctIndirect,
-      ...scores,
+      no_data:          noData,  // flag — don't score as wrong if radical data unavailable
+      ...(noData ? { direct_score: null, total_score: null, skipped: true } : scores),
       used_search,
       search_queries,
       time_to_submit_ms,
@@ -254,13 +267,17 @@ export default function RadicalNoticingTest({ participant, session, midQuizWord,
             </p>
           ) : (
             <>
-              {/* Question */}
+              {/* Question — hardcoded header from config */}
               <div>
-                <h2>
-                  What radicals can you remember seeing in the kanji for{' '}
-                  <span style={{ color: 'var(--accent)' }}>"{displayMeaning}"</span>
+                <h2 style={{ fontSize: '1.1rem', lineHeight: 1.4 }}>
+                  {config?.postTestHeader
+                    ?? `What radicals did you remember in the kanji for "${config?.radicalKanjiMeaning ?? displayMeaning}"`}
                 </h2>
-                <div style={{ marginTop: '0.5rem' }}>{compoundDisplay}</div>
+                <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)', marginTop: '0.4rem' }}>
+                  in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                    {config?.testDisplayLine ?? displayBlank}
+                  </span>
+                </div>
               </div>
 
               {/* Sentence context */}

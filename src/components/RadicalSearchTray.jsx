@@ -1,25 +1,12 @@
 /**
  * RadicalSearchTray.jsx — Thesis Platform
- * ========================================
- * Adapted from V3.1 RadicalSearchTray.
- *
- * Changes from original:
- *  1. Accepts `apiBase` as a prop (no import from App)
- *  2. onSuccess(selectedKanji, radicalsClicked) — passes radical selection history
- *     back to ReadingPage so it can be logged to thesis_sessions.gloss_log
- *  3. Tracks all radicals ever selected during this tray session in radicalsClickedRef
  */
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-function RadicalSearchTray({
-  targetKanji,
-  onSuccess,    // (selectedKanji: string, radicalsClicked: string[]) => void
-  onClose,
-  isOpen,
-  apiBase,
-}) {
+function RadicalSearchTray({ targetKanji, onSuccess, onClose, isOpen, apiBase }) {
+
   const [trayState, setTrayState]               = useState('half');
   const [searchQuery, setSearchQuery]           = useState('');
   const [radicalSuggestions, setRadicalSuggestions] = useState([]);
@@ -28,22 +15,24 @@ function RadicalSearchTray({
   const [candidateKanji, setCandidateKanji]     = useState([]);
   const [candidateCount, setCandidateCount]     = useState(0);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
-  const [allRadicals, setAllRadicals]           = useState([]);
-  const [hasFetchedAllRadicals, setHasFetchedAllRadicals] = useState(false);
-  const [filteredRadicalGroups, setFilteredRadicalGroups] = useState([]);
-  const [useFilteredBrowse, setUseFilteredBrowse] = useState(true);
   const [viewMode, setViewMode]                 = useState('search');
 
-  const [kanjiRadicalDetails, setKanjiRadicalDetails] = useState({});
-  const [kanjiInfo, setKanjiInfo]               = useState({});
+  // Browse: filtered radical groups from server (±3 window)
+  const [browseGroups, setBrowseGroups]         = useState([]);
+  const [hasFetchedBrowse, setHasFetchedBrowse] = useState(false);
 
-  // ── NEW: track ALL radicals ever clicked during this tray session ─────────
+  // Selected kanji details
+  const [kanjiRadicalDetails, setKanjiRadicalDetails] = useState({});
+  const [kanjiInsideDetails, setKanjiInsideDetails]   = useState({});
+  const [kanjiInfo, setKanjiInfo]                     = useState({});
+
   const radicalsClickedRef = useRef([]);
+  const searchInputRef     = useRef(null);
 
   const kanjiCount = [...targetKanji].filter(c => /[\u4E00-\u9FFF]/.test(c)).length || 1;
-  const searchInputRef = useRef(null);
-  const trayRef = useRef(null);
+  const canConfirm = selectedCandidates.length === kanjiCount;
 
+  // Focus search on open
   useEffect(() => {
     if (isOpen && trayState === 'half') {
       setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -68,52 +57,49 @@ function RadicalSearchTray({
     return () => clearTimeout(t);
   }, [searchQuery, apiBase]);
 
-  // Fetch radicals for browse mode
+  // Fetch browse-filtered (±3) when entering browse mode
   useEffect(() => {
-    if (trayState === 'full' && !hasFetchedAllRadicals) fetchAllRadicals();
-  }, [trayState]);
-
-  const fetchAllRadicals = async () => {
-    try {
-      const res = await axios.get(`${apiBase}/api/radicals/browse-all`);
-      setAllRadicals(res.data);
-      setHasFetchedAllRadicals(true);
-    } catch (e) { console.error(e); }
-  };
-
-  const fetchFilteredRadicals = async () => {
-    try {
-      const kanjiChars = [...targetKanji].filter(c => /[\u4E00-\u9FFF]/.test(c));
-      const charsToFetch = kanjiChars.length > 0 ? kanjiChars : [targetKanji];
-      const allGroups = [];
-      const seen = new Set();
-
-      for (const char of charsToFetch) {
-        const res = await axios.post(`${apiBase}/api/radicals/browse-filtered`, { target_kanji: char });
-        for (const group of res.data.groups ?? []) {
-          const unique = group.radicals.filter(r => { if (seen.has(r.radical)) return false; seen.add(r.radical); return true; });
-          if (unique.length > 0) allGroups.push({ ...group, radicals: unique });
+    if (viewMode !== 'browse' || hasFetchedBrowse) return;
+    const fetchBrowse = async () => {
+      try {
+        const kanjiChars = [...targetKanji].filter(c => /[\u4E00-\u9FFF]/.test(c));
+        const charsToFetch = kanjiChars.length > 0 ? kanjiChars : [targetKanji[0]];
+        // Collect all radicals with their stroke counts, deduped
+        const seen = new Set();
+        const allRadicals = [];
+        for (const char of charsToFetch) {
+          const res = await axios.post(`${apiBase}/api/radicals/browse-filtered`, {
+            target_kanji: char,
+            window_size: 3,
+          });
+          for (const group of res.data?.groups ?? []) {
+            for (const r of group.radicals) {
+              if (!seen.has(r.radical)) {
+                seen.add(r.radical);
+                // stroke_count is now on the radical object itself (from the fixed backend)
+                allRadicals.push({ ...r, stroke_count: r.stroke_count ?? group.stroke_count ?? 0 });
+              }
+            }
+          }
         }
+        // Group by stroke count, sorted
+        const byStroke = {};
+        for (const r of allRadicals) {
+          const sc = r.stroke_count ?? 0;
+          if (!byStroke[sc]) byStroke[sc] = [];
+          byStroke[sc].push(r);
+        }
+        const groups = Object.entries(byStroke)
+          .sort(([a], [b]) => Number(a) - Number(b))
+          .map(([sc, radicals]) => ({ sc: Number(sc), radicals }));
+        setBrowseGroups(groups);
+        setHasFetchedBrowse(true);
+      } catch (e) {
+        console.error('Browse fetch failed:', e);
       }
-      setFilteredRadicalGroups(allGroups);
-    } catch (e) {
-      console.error(e);
-      setUseFilteredBrowse(false);
-      fetchAllRadicals();
-    }
-  };
-
-  const fetchKanjiDetails = async (kanji) => {
-    if (kanjiRadicalDetails[kanji]) return;
-    try {
-      const res = await axios.post(`${apiBase}/api/radicals/for-kanji`, { word: kanji });
-      const details = res.data[0];
-      if (details) {
-        setKanjiRadicalDetails(prev => ({ ...prev, [kanji]: details.radicals }));
-        setKanjiInfo(prev => ({ ...prev, [kanji]: { meaning: details.meaning || '', on: details.on || [], kun: details.kun || [] } }));
-      }
-    } catch (e) { console.error(e); }
-  };
+    };
+    fetchBrowse();
+  }, [viewMode, targetKanji, apiBase, hasFetchedBrowse]);
 
   // Filter candidates when selected radicals change
   useEffect(() => {
@@ -123,29 +109,57 @@ function RadicalSearchTray({
         const res = await axios.post(`${apiBase}/api/radicals/kanji-by-components`, {
           components: selectedRadicals.map(r => r.radical)
         });
-        setCandidateKanji(res.data.kanji_list);
-        setCandidateCount(res.data.count);
-      } catch (e) { console.error(e); setCandidateKanji([]); setCandidateCount(0); }
+        setCandidateKanji(res.data.kanji_list ?? []);
+        setCandidateCount(res.data.count ?? 0);
+      } catch (e) { setCandidateKanji([]); setCandidateCount(0); }
     };
     filter();
   }, [selectedRadicals, apiBase]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // Fetch kanji details (radicals + kanji_inside + readings)
+  const fetchKanjiDetails = async (kanji) => {
+    if (kanjiRadicalDetails[kanji] !== undefined) return;
+    // Set placeholder to avoid double-fetch
+    setKanjiRadicalDetails(prev => ({ ...prev, [kanji]: null }));
+    try {
+      const res = await axios.post(`${apiBase}/api/radicals/for-kanji`, { word: kanji });
+      const d = res.data[0];
+      if (d) {
+        // Radicals only — exclude any that are also in kanji_inside
+        const kanjiInside = d.kanji_inside ?? [];
+        const kanjiInsideChars = new Set(kanjiInside.map(k => typeof k === 'string' ? k : k.kanji));
+        const pureRadicals = (d.radicals ?? []).filter(r => !kanjiInsideChars.has(r.radical));
+        setKanjiRadicalDetails(prev => ({ ...prev, [kanji]: pureRadicals }));
+        setKanjiInsideDetails(prev => ({ ...prev, [kanji]: kanjiInside }));
+        const toArr = v => Array.isArray(v) ? v : (v ? [v] : []);
+        setKanjiInfo(prev => ({
+          ...prev,
+          [kanji]: {
+            meaning: d.meaning || '',
+            on:  toArr(d.on).slice(0, 2),
+            kun: toArr(d.kun).slice(0, 2),
+          }
+        }));
+      }
+    } catch (e) {
+      console.error('fetchKanjiDetails failed:', e);
+      setKanjiRadicalDetails(prev => ({ ...prev, [kanji]: [] }));
+    }
+  };
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleRadicalSelect = (radical) => {
-    const alreadySelected = selectedRadicals.find(r => r.radical === radical.radical);
-    if (alreadySelected) {
+    const already = selectedRadicals.find(r => r.radical === radical.radical);
+    if (already) {
       setSelectedRadicals(prev => prev.filter(r => r.radical !== radical.radical));
     } else {
-      const radicalToAdd = {
+      setSelectedRadicals(prev => [...prev, {
         radical: radical.radical,
         primary_english: radical.primary_english || radical.english_names?.[0] || '',
         english_names: radical.english_names || [radical.primary_english || ''],
         stroke_count: radical.stroke_count || 0,
-      };
-      setSelectedRadicals(prev => [...prev, radicalToAdd]);
-
-      // ── Record in thesis click history ────────────────────────────────────
+      }]);
       if (!radicalsClickedRef.current.includes(radical.radical)) {
         radicalsClickedRef.current = [...radicalsClickedRef.current, radical.radical];
       }
@@ -154,20 +168,20 @@ function RadicalSearchTray({
   };
 
   const handleKanjiSelect = (kanji) => {
-    const alreadySelected = selectedCandidates.includes(kanji);
-    if (alreadySelected) {
-      setSelectedCandidates(prev => prev.filter(k => k !== kanji));
-    } else {
-      const newSelection = [...selectedCandidates, kanji];
-      setSelectedCandidates(newSelection);
-      setSelectedRadicals([]);
-      setCandidateKanji([]);
-      fetchKanjiDetails(kanji);
-    }
+    if (selectedCandidates.includes(kanji)) return;
+    setSelectedCandidates(prev => [...prev, kanji]);
+    setSelectedRadicals([]);
+    setCandidateKanji([]);
+    fetchKanjiDetails(kanji);
+  };
+
+  const handleRemoveSelectedKanji = (kanji, e) => {
+    e.stopPropagation();
+    setSelectedCandidates(prev => prev.filter(k => k !== kanji));
   };
 
   const handleConfirm = () => {
-    // Pass both the selected kanji AND the full list of radicals ever clicked
+    if (!canConfirm) return;
     onSuccess(selectedCandidates.join(''), radicalsClickedRef.current);
   };
 
@@ -186,83 +200,160 @@ function RadicalSearchTray({
 
   if (!isOpen) return null;
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Selected candidates block (reused in both modes) ───────────────────────
+
+  const SelectedCandidatesBlock = selectedCandidates.length > 0 ? (
+    <div className="selected-candidates-section">
+      <div className="section-label">
+        Your Selection ({selectedCandidates.length}/{kanjiCount}):
+      </div>
+      <div className="selected-candidates-display">
+        {selectedCandidates.map((kanji, i) => {
+          const info      = kanjiInfo[kanji];
+          const radicals  = kanjiRadicalDetails[kanji];
+          const inside    = kanjiInsideDetails[kanji] ?? [];
+          return (
+            <div key={i} className="selected-candidate-entry">
+
+              {/* Kanji + meaning + remove */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <span style={{
+                  fontFamily: 'var(--font-jp)', fontSize: '1.8rem', fontWeight: 500,
+                  color: '#185fa5', background: 'white', padding: '4px 10px',
+                  borderRadius: 'var(--radius-md)', border: '1.5px solid #185fa5',
+                }}>
+                  {kanji}
+                </span>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {info?.meaning && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>{info.meaning}</span>
+                  )}
+                  {/* Kun/On readings */}
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {info?.kun?.map((r, ri) => (
+                      <span key={`kun${ri}`} style={{
+                        fontFamily: 'var(--font-jp)', fontSize: '0.72rem',
+                        background: '#f0faf5', border: '1px solid #2d6a4f',
+                        color: '#2d6a4f', borderRadius: '10px', padding: '1px 6px',
+                      }}>
+                        kun: {r}
+                      </span>
+                    ))}
+                    {info?.on?.map((r, ri) => (
+                      <span key={`on${ri}`} style={{
+                        fontFamily: 'var(--font-jp)', fontSize: '0.72rem',
+                        background: '#e8f0fe', border: '1px solid #185fa5',
+                        color: '#185fa5', borderRadius: '10px', padding: '1px 6px',
+                      }}>
+                        on: {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => handleRemoveSelectedKanji(kanji, e)}
+                  title="Remove"
+                  style={{
+                    background: 'none', border: '1px solid var(--paper-border)',
+                    borderRadius: '50%', width: '22px', height: '22px',
+                    cursor: 'pointer', fontSize: '0.7rem', color: 'var(--ink-faint)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}
+                >✕</button>
+              </div>
+
+              {/* Radicals */}
+              {radicals === null && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>Loading…</span>
+              )}
+              {radicals?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-faint)', marginBottom: '3px' }}>
+                    Radicals
+                  </div>
+                  <div className="candidate-radical-reveal">
+                    {radicals.map((r, j) => (
+                      <span key={j} className="reveal-radical-chip">
+                        <span className="radical-character">{r.radical}</span>
+                        <span className="radical-meaning">{r.english_names?.slice(0, 2).join(' / ')}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Kanji inside — separate section with on readings */}
+              {inside.length > 0 && (
+                <div style={{ marginTop: '5px' }}>
+                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-faint)', marginBottom: '3px' }}>
+                    Kanji inside
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {inside.map((k, ki) => {
+                      const kChar    = typeof k === 'string' ? k : k.kanji;
+                      const kMeaning = typeof k === 'string' ? '' : (k.meaning || '');
+                      const toArr2 = v => Array.isArray(v) ? v : (v ? [v] : []);
+                      const kOn      = typeof k === 'string' ? [] : toArr2(k.on).slice(0, 2);
+                      return (
+                        <div key={ki} style={{
+                          display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+                          gap: '2px', background: '#e8f0fe', border: '1px solid #c5d5f5',
+                          borderRadius: '8px', padding: '4px 8px', minWidth: '48px',
+                        }}>
+                          <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.1rem', color: '#185fa5' }}>{kChar}</span>
+                          {kMeaning && <span style={{ fontSize: '0.65rem', color: '#185fa5' }}>{kMeaning}</span>}
+                          {kOn.map((r, ri) => (
+                            <span key={ri} style={{ fontFamily: 'var(--font-jp)', fontSize: '0.65rem', color: '#185fa5', opacity: 0.8 }}>
+                              on: {r}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })}
+      </div>
+
+      <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginTop: '0.5rem', marginBottom: '0.4rem' }}>
+        {selectedCandidates.length} / {kanjiCount} kanji selected
+      </p>
+      <button
+        className="check-answer-button"
+        onClick={handleConfirm}
+        disabled={!canConfirm}
+        style={{ opacity: canConfirm ? 1 : 0.45, cursor: canConfirm ? 'pointer' : 'not-allowed' }}
+      >
+        Check kanji match ✓
+      </button>
+    </div>
+  ) : null;
+
+  // ── Full render ─────────────────────────────────────────────────────────────
 
   return (
-    <div
-      ref={trayRef}
-      className={`radical-tray radical-tray-${trayState}`}
-    >
-      {/* Expand / collapse handle */}
-      <div className="tray-header-controls">
-        <button
-          className="tray-expand-button"
-          onClick={() => setTrayState(s => s === 'half' ? 'full' : 'half')}
-        >
+    <div className={`radical-tray radical-tray-${trayState}`}>
+
+      {/* Close — always visible */}
+      <button className="tray-close-btn" onClick={handleClose}
+        style={{ position: 'absolute', top: '10px', right: '12px', zIndex: 20 }}>
+        ✕
+      </button>
+
+      {/* Expand/collapse */}
+      <div className="tray-header-controls" style={{ paddingRight: '2.5rem' }}>
+        <button className="tray-expand-button"
+          onClick={() => setTrayState(s => s === 'half' ? 'full' : 'half')}>
           {trayState === 'half' ? '⬆️ Expand' : '⬇️ Collapse'}
         </button>
       </div>
 
-      <button className="tray-close-btn" onClick={handleClose}>✕</button>
-
-      {/* Selected candidates + confirm — hidden in browse mode to save space */}
-      {selectedCandidates.length > 0 && viewMode === 'search' && (
-        <div className="selected-candidates-section">
-          <div className="section-label">
-            Your Selection ({selectedCandidates.length}/{kanjiCount}):
-          </div>
-          <div className="selected-candidates-display">
-            {selectedCandidates.map((kanji, i) => (
-              <div key={i} className="selected-candidate-entry">
-                <div className="selected-candidate-char">
-                  <span className="candidate-kanji-char">{kanji}</span>
-                  {kanjiInfo[kanji] && (
-                    <span className="candidate-kanji-readings">
-                      {kanjiInfo[kanji].meaning && <span className="kanji-meaning">{kanjiInfo[kanji].meaning}</span>}
-                      <span className="kanji-readings-row">
-                        {kanjiInfo[kanji].kun[0] && <span className="reading-tag kun">Kun: {kanjiInfo[kanji].kun[0]}</span>}
-                        {kanjiInfo[kanji].on[0]  && <span className="reading-tag on">On: {kanjiInfo[kanji].on[0]}</span>}
-                      </span>
-                    </span>
-                  )}
-                </div>
-                {kanjiRadicalDetails[kanji] && (() => {
-                  const byStroke = {};
-                  for (const r of kanjiRadicalDetails[kanji]) {
-                    const sc = r.stroke_count ?? 0;
-                    if (!byStroke[sc]) byStroke[sc] = [];
-                    byStroke[sc].push(r);
-                  }
-                  return (
-                    <div className="candidate-radical-reveal">
-                      {Object.keys(byStroke).sort((a, b) => a - b).map(sc => (
-                        <div key={sc} className="reveal-stroke-group">
-                          <span className="reveal-stroke-label">{sc} stroke{sc > 1 ? 's' : ''}</span>
-                          <div className="reveal-stroke-chips">
-                            {byStroke[sc].map((r, j) => (
-                              <span key={j} className="reveal-radical-chip">
-                                <span className="radical-character">{r.radical}</span>
-                                <span className="radical-meaning">{r.english_names?.slice(0, 2).join(' / ')}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            ))}
-          </div>
-
-          <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: '0.4rem' }}>
-            {selectedCandidates.length} / {kanjiCount} kanji selected
-          </p>
-          <button className="check-answer-button" onClick={handleConfirm}>
-            Check kanji match ✓
-          </button>
-        </div>
-      )}
+      {/* Selected candidates — shown in search mode only, above target word */}
+      {viewMode === 'search' && SelectedCandidatesBlock}
 
       {/* Target word */}
       <div className="target-kanji-display">
@@ -272,44 +363,36 @@ function RadicalSearchTray({
 
       {/* Mode toggle */}
       <div className="mode-toggle">
-        <button
-          className={`mode-button ${viewMode === 'search' ? 'active' : ''}`}
-          onClick={() => { setViewMode('search'); setTrayState('half'); }}
-        >
+        <button className={`mode-button ${viewMode === 'search' ? 'active' : ''}`}
+          onClick={() => { setViewMode('search'); setTrayState('half'); }}>
           🔍 Search Radicals
         </button>
-        <button
-          className={`mode-button ${viewMode === 'browse' ? 'active' : ''}`}
-          onClick={() => {
-            setViewMode('browse');
-            setTrayState('full');
-            if (useFilteredBrowse) fetchFilteredRadicals();
-            else if (!hasFetchedAllRadicals) fetchAllRadicals();
-          }}
-        >
-          📚 Browse More Radicals
+        <button className={`mode-button ${viewMode === 'browse' ? 'active' : ''}`}
+          onClick={() => { setViewMode('browse'); setTrayState('full'); }}>
+          📚 Browse Radicals
         </button>
       </div>
 
-      {/* Selected radicals bar */}
-      {selectedRadicals.length > 0 && viewMode === 'search' && (
-        <div className="selected-radicals-section">
-          <div className="section-label">Selected Radicals ({selectedRadicals.length}):</div>
-          <div className="selected-chips">
-            {selectedRadicals.map((r, i) => (
-              <div key={i} className="selected-chip" onClick={() => handleRadicalSelect(r)}>
-                <span className="radical-character">{r.radical}</span>
-                <span className="radical-meaning">{r.primary_english}</span>
-                <span className="remove-icon">✕</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Search mode */}
+      {/* ── Search mode ── */}
       {viewMode === 'search' && (
         <>
+          {/* Selected radical chips */}
+          {selectedRadicals.length > 0 && (
+            <div className="selected-radicals-section">
+              <div className="section-label">Selected Radicals ({selectedRadicals.length}):</div>
+              <div className="selected-chips">
+                {selectedRadicals.map((r, i) => (
+                  <div key={i} className="selected-chip" onClick={() => handleRadicalSelect(r)}>
+                    <span className="radical-character">{r.radical}</span>
+                    <span className="radical-meaning">{r.primary_english}</span>
+                    <span className="remove-icon">✕</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search input */}
           <div className="tray-search-section">
             <input
               ref={searchInputRef}
@@ -322,13 +405,13 @@ function RadicalSearchTray({
             {isSearching && <div className="search-loading">Searching...</div>}
           </div>
 
+          {/* Search results */}
           {radicalSuggestions.length > 0 && (
             <div className="radical-suggestions-section">
               <div className="section-label">Search Results:</div>
               <div className="radical-chips-container">
                 {radicalSuggestions.map((r, i) => (
-                  <div
-                    key={i}
+                  <div key={i}
                     className={`radical-chip ${selectedRadicals.find(s => s.radical === r.radical) ? 'selected' : ''}`}
                     onClick={() => handleRadicalSelect(r)}
                   >
@@ -339,95 +422,65 @@ function RadicalSearchTray({
               </div>
             </div>
           )}
+
+          {/* Candidates */}
+          <div className="candidates-section">
+            {selectedRadicals.length > 0 && (
+              <div className="section-label">Candidates ({candidateCount}):</div>
+            )}
+            {candidateKanji.length > 0 && (
+              <>
+                <div className="candidate-instruction">
+                  👆 Tap the kanji you see in the word above
+                </div>
+                <div className="candidate-kanji-grid">
+                  {[...candidateKanji].sort().slice(0, 8).map((kanji, i) => (
+                    <div key={i}
+                      className={`candidate-kanji ${selectedCandidates.includes(kanji) ? 'selected-candidate' : ''}`}
+                      onClick={() => handleKanjiSelect(kanji)}
+                    >
+                      {kanji}
+                      {selectedCandidates.includes(kanji) && <span className="selected-indicator">✓</span>}
+                    </div>
+                  ))}
+                  {candidateCount > 8 && (
+                    <div className="more-results">+{candidateCount - 8} more — try adding another radical</div>
+                  )}
+                </div>
+              </>
+            )}
+            {selectedRadicals.length > 0 && candidateKanji.length === 0 && (
+              <div className="no-results">No kanji found with these radicals. Try different combinations.</div>
+            )}
+          </div>
         </>
       )}
 
-      {/* Browse mode */}
+      {/* ── Browse mode — filtered by ±3 stroke window, no selected kanji block ── */}
       {viewMode === 'browse' && (
         <div className="browse-radicals-section">
-          {useFilteredBrowse && filteredRadicalGroups.length > 0 ? (
-            <>
-              <div className="section-label">Browse Radicals:</div>
-              <div className="radicals-filtered-browse">
-                {filteredRadicalGroups.map((group, gi) => (
-                  <div key={gi}>
-                    {gi > 0 && <div className="group-separator" />}
-                    <div className="radical-chips-container">
-                      {group.radicals.map((r, i) => (
-                        <div key={i} className="browse-radical-chip">
-                          <span className="radical-character">{r.radical}</span>
-                          <span className="radical-meaning">{r.english_names?.slice(0, 2).join(' / ') || r.primary_english}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : allRadicals.length > 0 ? (
-            <>
-              <div className="section-label">Browse by Stroke Count:</div>
-              <div className="radicals-by-stroke">
-                {[1,2,3,4,5,6,7,8,9,10].map(sc => {
-                  const group = allRadicals.filter(r => r.stroke_count === sc);
-                  if (!group.length) return null;
-                  return (
-                    <div key={sc} className="stroke-group">
-                      <div className="stroke-label">{sc} stroke{sc > 1 ? 's' : ''}:</div>
-                      <div className="radical-chips-container">
-                        {group.map((r, i) => (
-                          <div key={i} className="browse-radical-chip">
-                            <span className="radical-character">{r.radical}</span>
-                            <span className="radical-meaning">{r.primary_english}</span>
-                          </div>
-                        ))}
+          {browseGroups.length > 0 ? (
+            <div className="radicals-by-stroke">
+              {browseGroups.map(({ sc, radicals }) => (
+                <div key={sc} className="stroke-group">
+                  <div className="stroke-label">{sc} stroke{sc > 1 ? 's' : ''}:</div>
+                  <div className="radical-chips-container">
+                    {radicals.map((r, i) => (
+                      <div key={i} className="browse-radical-chip">
+                        <span className="radical-character">{r.radical}</span>
+                        <span className="radical-meaning">{r.primary_english || r.english_names?.[0]}</span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="loading-radicals">Loading radicals…</div>
           )}
         </div>
       )}
 
-
-
-      {/* Candidate grid */}
-      {viewMode === 'search' && (
-        <div className="candidates-section">
-          {selectedRadicals.length > 0 && (
-            <div className="section-label">Candidates ({candidateCount}):</div>
-          )}
-          {candidateKanji.length > 0 && (
-            <>
-              <div className="candidate-instruction">
-                👆 Click to select kanji (select {kanjiCount} character{kanjiCount > 1 ? 's' : ''})
-              </div>
-              <div className="candidate-kanji-grid">
-                {[...candidateKanji].sort().slice(0, 50).map((kanji, i) => (
-                  <div
-                    key={i}
-                    className={`candidate-kanji ${selectedCandidates.includes(kanji) ? 'selected-candidate' : ''}`}
-                    onClick={() => handleKanjiSelect(kanji)}
-                  >
-                    {kanji}
-                    {selectedCandidates.includes(kanji) && <span className="selected-indicator">✓</span>}
-                  </div>
-                ))}
-                {candidateCount > 50 && (
-                  <div className="more-results">+{candidateCount - 50} more…</div>
-                )}
-              </div>
-            </>
-          )}
-          {selectedRadicals.length > 0 && candidateKanji.length === 0 && (
-            <div className="no-results">No kanji found with these radicals. Try different combinations.</div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
