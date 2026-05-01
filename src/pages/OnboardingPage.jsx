@@ -132,9 +132,49 @@ export default function OnboardingPage({ onComplete }) {
             sign in with the same username and the platform will guide you to the next step.
           </p>
           <p style={{ lineHeight: 1.8, color: 'var(--ink)', marginTop: '0.75rem' }}>
-            Before starting, please choose a username that is not your real name but that you will be
-            able to remember.
+            Please do not use a dictionary, translation app, or any other external resource during the study. The glossing tool provided is the only help you should use.
           </p>
+          <p style={{ lineHeight: 1.8, color: 'var(--ink)', marginTop: '0.75rem' }}>
+            Before starting, please choose a username that you will be able to remember but must NOT contain your name or identifiable information (ex. birth date).
+          </p>
+        </div>
+
+        {/* Consent form section */}
+        <div style={{
+          background: 'var(--paper-warm)',
+          border: '1px solid var(--paper-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '0.9rem 1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.6rem',
+        }}>
+          <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
+            Participant consent form
+          </p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', margin: 0, lineHeight: 1.5 }}>
+            Please download, sign, and upload the consent form before continuing.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <a
+              href="https://drive.google.com/uc?export=download&id=1dyZnlBE4O2wkWMS1Nffzyw5dbyTNtTnN"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.85rem', textDecoration: 'none', flex: 1, textAlign: 'center' }}
+            >
+              ⬇ Download consent form
+            </a>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSctqy2uHRNNh9Cwjbl-GoRw4vOA-c5mH6AbjH9jTIgtJY_2vA/viewform?usp=publish-editor"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.85rem', textDecoration: 'none', flex: 1, textAlign: 'center' }}
+            >
+              ↑ Upload signed form
+            </a>
+          </div>
         </div>
 
         {/* Consent checkbox */}
@@ -147,7 +187,7 @@ export default function OnboardingPage({ onComplete }) {
             checked={consented}
             onChange={e => setConsented(e.target.checked)}
           />
-          <span className="option-label">I have filled in the consent form.</span>
+          <span className="option-label">I have read, signed, and submitted the consent form.</span>
         </label>
 
         {/* Username + submit */}

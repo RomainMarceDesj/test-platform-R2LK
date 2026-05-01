@@ -143,15 +143,30 @@ export default function ScreeningPage({ participantId, onComplete }) {
   const [error, setError]     = useState('');
 
   const set = key => val => setForm(prev => ({ ...prev, [key]: val }));
-  const allAnswered = Object.values(form).every(v => v !== '');
+  // contact_info is optional — exclude it from the required check
+  const allAnswered = Object.entries(form)
+    .filter(([k]) => k !== 'contact_info')
+    .every(([, v]) => v !== '');
 
   const handleSubmit = async () => {
     if (!allAnswered) return;
     setLoading(true);
     setError('');
+    // Fallback: if prop is missing for any reason, recover from sessionStorage
+    let pid = participantId;
+    if (!pid) {
+      try { pid = sessionStorage.getItem('thesis_participant_id') || ''; } catch (_) {}
+    }
+    console.log('[Screening] submit with participant_id =', JSON.stringify(pid));
+    if (!pid) {
+      setError('Session lost. Please refresh the page and start over.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await axios.post(`${API_BASE}/api/thesis/register`, {
-        participant_id: participantId,
+        participant_id: pid,
         screening: form,
       });
       onComplete({

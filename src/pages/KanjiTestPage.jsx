@@ -1,24 +1,28 @@
 /**
- * KanjiTestPage.jsx
- * =================
- * Phase 5: Post-reading kanji test.
+ * KanjiTestPage.jsx — UNIFIED TEST
+ * =================================
+ * Single post-reading test that combines radical noticing AND reading/meaning
+ * questions into one continuous flow.
  *
- * Question count: 6 if participant glossed ≤6 words, 8 if they glossed >6.
- * Pool: glossed words in WORD_PRIORITY_ORDER, excluding the mid-quiz word.
- * Type assignment: equal radical / reading+meaning split.
- *   - Assign preferred type from WORD_PRIORITY_ORDER
- *   - When one type bucket fills (N/2), force remaining words to the other type
- *   - If N is odd, last word gets its preferred type
+ *   Pool:  glossed words ∩ WORD_PRIORITY_ORDER, mid-quiz word excluded
+ *   Order: WORD_PRIORITY_ORDER
+ *   Type:  fixed per word (item.type = 'radical' | 'reading_meaning')
+ *   Count: number of glossed eligible words, capped at 8
  *
- * Question types:
- *   'radical'         — same RadicalSelector as the noticing test
- *   'reading_meaning' — one screen, two independent MC selectors (reading + meaning)
+ * All display strings come from hardcoded fields in studyConfig.js
+ * (postTestHeader, testDisplayLine, blankDisplay, reading, meaning).
+ * No dynamic /get_word_info fetches for known words.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import RadicalSelector from '../components/RadicalSelector';
-import { TARGET_KANJI, NON_TARGET_RADICAL_WORDS, WORD_PRIORITY_ORDER, API_BASE } from '../config/studyConfig';
+import {
+  TARGET_KANJI,
+  NON_TARGET_RADICAL_WORDS,
+  WORD_PRIORITY_ORDER,
+  API_BASE,
+} from '../config/studyConfig';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -31,12 +35,8 @@ function shuffle(arr) {
   return a;
 }
 
-function normaliseReading(s) {
-  return s.trim().toLowerCase().replace(/\s+/g, '');
-}
-
+// Build distractors from TARGET_KANJI pool, deduplicated by value
 function buildMcOptions(correct, pool, getVal, count = 3) {
-  // Deduplicate by value — no option should appear twice
   const seen = new Set([correct]);
   const distractors = [];
   const candidates = shuffle(pool.filter(w => TARGET_KANJI[w]));
@@ -51,31 +51,30 @@ function buildMcOptions(correct, pool, getVal, count = 3) {
   return shuffle([correct, ...distractors]);
 }
 
-// ── Pool-building algorithm ───────────────────────────────────────────────────
+function configFor(word) {
+  return TARGET_KANJI[word] ?? NON_TARGET_RADICAL_WORDS?.[word] ?? null;
+}
 
-function buildTestItems(glossLog, wasGlossed, midQuizWord) {
-  // Collect glossed words in priority order, excluding mid-quiz word.
-  // Type is fixed per word — no overrides, no balancing logic.
+// ── Pool building ─────────────────────────────────────────────────────────────
+
+function buildTestItems(glossLog, midQuizWord) {
   const glossedSet = new Set(
     (glossLog ?? []).map(e => e.word).filter(w => w !== midQuizWord)
   );
 
-  const items = WORD_PRIORITY_ORDER
+  return WORD_PRIORITY_ORDER
     .filter(item => glossedSet.has(item.word))
     .slice(0, 8)
     .map(item => ({
       word: item.word,
       type: item.type,
-      config: TARGET_KANJI[item.word] ?? NON_TARGET_RADICAL_WORDS?.[item.word] ?? null,
+      config: configFor(item.word),
     }));
-
-  return items;
 }
 
-// ── Reading+Meaning combined question ────────────────────────────────────────
+// ── Reading + Meaning question (single screen, two MC selectors) ─────────────
 
 function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
-  // Store selected INDEX not value — prevents duplicate-value highlight bug
   const [readingIdx, setReadingIdx] = useState(null);
   const [meaningIdx, setMeaningIdx] = useState(null);
 
@@ -107,11 +106,11 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
     });
   };
 
-  if (!config) {
+  if (!config?.reading || !config?.meaning) {
     return (
       <div style={{ textAlign: 'center', padding: '1rem' }}>
         <span style={{ fontFamily: 'var(--font-jp)', fontSize: '2.5rem' }}>{word}</span>
-        <p style={{ marginTop: '1rem', color: 'var(--ink-faint)' }}>No data available.</p>
+        <p style={{ marginTop: '1rem', color: 'var(--ink-faint)' }}>No data available for this word.</p>
         <button className="btn btn-secondary" style={{ marginTop: '1rem' }}
           onClick={() => onAnswer({ word, question_type: 'reading_meaning', answer_given: 'no_data', is_correct: null, skipped: true })}>
           Skip →
@@ -124,17 +123,15 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ textAlign: 'center' }}>
         <span style={{ fontFamily: 'var(--font-jp)', fontSize: '2.5rem', letterSpacing: '0.05em' }}>{word}</span>
-        {config && (
-          <div style={{ marginTop: '0.35rem', fontFamily: 'var(--font-jp)', fontSize: '0.95rem', color: 'var(--ink-muted)' }}>
-            {config.blankDisplay && (
-              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{config.blankDisplay}</span>
-            )}
-            {' '}
-            <span style={{ fontSize: '0.85rem' }}>
-              ({config.reading}{config.reading && config.meaning ? ', ' : ''}{config.meaning})
-            </span>
-          </div>
-        )}
+        <div style={{ marginTop: '0.35rem', fontFamily: 'var(--font-jp)', fontSize: '0.95rem', color: 'var(--ink-muted)' }}>
+          {config.blankDisplay && (
+            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{config.blankDisplay}</span>
+          )}
+          {' '}
+          <span style={{ fontSize: '0.85rem' }}>
+            ({config.reading}{config.reading && config.meaning ? ', ' : ''}{config.meaning})
+          </span>
+        </div>
       </div>
 
       {/* Reading */}
@@ -192,27 +189,23 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
         </div>
       </div>
 
-      <button
-        className="btn btn-primary btn-full"
-        onClick={handleSubmit}
-        disabled={!canSubmit}
-      >
+      <button className="btn btn-primary btn-full" onClick={handleSubmit} disabled={!canSubmit}>
         {canSubmit ? 'Next →' : 'Answer both questions to continue'}
       </button>
     </div>
   );
 }
 
-// ── Radical question ──────────────────────────────────────────────────────────
+// ── Radical noticing question (uses RadicalSelector, hardcoded display) ──────
 
-function RadicalQ({ word, config, participant, onAnswer }) {
+function RadicalQ({ word, config, onAnswer }) {
   const targetChar = config?.testKanji ?? word[0];
-  const [radicals, setRadicals]       = useState([]);
+  const [radicals, setRadicals]               = useState([]);
   const [correctDirect, setCorrectDirect]     = useState([]);
   const [correctIndirect, setCorrectIndirect] = useState([]);
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading]                 = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const load = async () => {
       try {
         const [browseRes, breakdownRes] = await Promise.all([
@@ -225,7 +218,10 @@ function RadicalQ({ word, config, participant, onAnswer }) {
         const seen = new Set();
         for (const group of browseRes.data?.groups ?? []) {
           for (const r of group.radicals) {
-            if (!seen.has(r.radical)) { seen.add(r.radical); allCandidates.push({ ...r, is_direct: directSet.has(r.radical) }); }
+            if (!seen.has(r.radical)) {
+              seen.add(r.radical);
+              allCandidates.push({ ...r, is_direct: directSet.has(r.radical) });
+            }
           }
         }
         setRadicals(allCandidates);
@@ -276,9 +272,9 @@ function RadicalQ({ word, config, participant, onAnswer }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        {/* Hardcoded header — never derived dynamically */}
         <h2 style={{ fontSize: '1.1rem', lineHeight: 1.4 }}>
-          {config?.postTestHeader ?? `What radicals did you remember in the kanji for "${config?.radicalKanjiMeaning ?? word}"`}
+          {config?.postTestHeader
+            ?? `What radicals did you remember in the kanji for "${config?.radicalKanjiMeaning ?? word}"`}
         </h2>
         <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)' }}>
           in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
@@ -289,24 +285,21 @@ function RadicalQ({ word, config, participant, onAnswer }) {
       {loading ? (
         <p style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '1rem' }}>Loading…</p>
       ) : (
-        <RadicalSelector
-          candidateRadicals={radicals}
-          onSubmit={handleSubmit}
-          submitLabel="Next →"
-        />
+        <RadicalSelector candidateRadicals={radicals} onSubmit={handleSubmit} submitLabel="Next →" />
       )}
     </div>
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Main: unified test ────────────────────────────────────────────────────────
 
 export default function KanjiTestPage({ participant, session, onComplete }) {
-  const { wasGlossed, glossLog } = session;
+  const { glossLog } = session;
 
-  const testItems = useMemo(() =>
-    buildTestItems(glossLog, wasGlossed, session.midQuizWord),
-  []); // eslint-disable-line
+  const testItems = useMemo(
+    () => buildTestItems(glossLog, session.midQuizWord),
+    []
+  ); // eslint-disable-line
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [results, setResults]       = useState([]);
@@ -336,7 +329,7 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
   }
 
   const current = testItems[currentIdx];
-  const config   = current.config ?? TARGET_KANJI[current.word] ?? NON_TARGET_RADICAL_WORDS?.[current.word] ?? null;
+  const config  = current.config;
   const allWords = Object.keys(TARGET_KANJI);
 
   return (
@@ -344,7 +337,7 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
       <div className="page-inner animate-in">
 
         <div>
-          <h3>Vocabulary test — {currentIdx + 1} / {testItems.length}</h3>
+          <h3>Quiz — {currentIdx + 1} / {testItems.length}</h3>
           <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
             {testItems.map((item, i) => (
               <div
@@ -373,7 +366,6 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
               key={`rad-${currentIdx}`}
               word={current.word}
               config={config}
-              participant={participant}
               onAnswer={handleAnswer}
             />
           )}
