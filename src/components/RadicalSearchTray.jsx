@@ -25,6 +25,7 @@ function RadicalSearchTray({ targetKanji, onSuccess, onClose, isOpen, apiBase })
   const [kanjiRadicalDetails, setKanjiRadicalDetails] = useState({});
   const [kanjiInsideDetails, setKanjiInsideDetails]   = useState({});
   const [kanjiInfo, setKanjiInfo]                     = useState({});
+  const [candidateMeanings, setCandidateMeanings]     = useState({}); // meaning for candidate grid kanji
 
   const radicalsClickedRef = useRef([]);
   const searchInputRef     = useRef(null);
@@ -109,12 +110,24 @@ function RadicalSearchTray({ targetKanji, onSuccess, onClose, isOpen, apiBase })
         const res = await axios.post(`${apiBase}/api/radicals/kanji-by-components`, {
           components: selectedRadicals.map(r => r.radical)
         });
-        setCandidateKanji(res.data.kanji_list ?? []);
+        const kanji = res.data.kanji_list ?? [];
+        setCandidateKanji(kanji);
         setCandidateCount(res.data.count ?? 0);
+
+        // Fetch meanings for display (non-blocking, best-effort)
+        const first8 = [...kanji].sort().slice(0, 8);
+        for (const k of first8) {
+          if (candidateMeanings[k]) continue;
+          try {
+            const info = await axios.post(`${apiBase}/api/radicals/for-kanji`, { word: k });
+            const meaning = info.data?.[0]?.meaning ?? '';
+            if (meaning) setCandidateMeanings(prev => ({ ...prev, [k]: meaning }));
+          } catch (_) { /* silent */ }
+        }
       } catch (e) { setCandidateKanji([]); setCandidateCount(0); }
     };
     filter();
-  }, [selectedRadicals, apiBase]);
+  }, [selectedRadicals, apiBase]); // eslint-disable-line
 
   // Fetch kanji details (radicals + kanji_inside + readings)
   const fetchKanjiDetails = async (kanji) => {
@@ -401,6 +414,7 @@ function RadicalSearchTray({ targetKanji, onSuccess, onClose, isOpen, apiBase })
               placeholder="Search radicals (e.g., 'water', 'speech', 'hand')..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
             />
             {isSearching && <div className="search-loading">Searching...</div>}
           </div>
@@ -438,8 +452,23 @@ function RadicalSearchTray({ targetKanji, onSuccess, onClose, isOpen, apiBase })
                     <div key={i}
                       className={`candidate-kanji ${selectedCandidates.includes(kanji) ? 'selected-candidate' : ''}`}
                       onClick={() => handleKanjiSelect(kanji)}
+                      style={{ flexDirection: 'column', gap: '2px', minHeight: '52px' }}
                     >
                       {kanji}
+                      {candidateMeanings[kanji] && (
+                        <span style={{
+                          fontSize: '0.6rem',
+                          color: selectedCandidates.includes(kanji) ? 'rgba(255,255,255,0.85)' : 'var(--ink-faint)',
+                          textAlign: 'center',
+                          lineHeight: 1.1,
+                          maxWidth: '52px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {candidateMeanings[kanji]}
+                        </span>
+                      )}
                       {selectedCandidates.includes(kanji) && <span className="selected-indicator">✓</span>}
                     </div>
                   ))}

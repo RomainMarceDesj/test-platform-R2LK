@@ -193,11 +193,12 @@ export default function ReadingPage({
     }
     if (!clickedWord || clickedWord.type !== 'word') return;
 
-    // If word already loaded — toggle furigana/translation, no tray
-    if (clickedWord.isLazyLoaded) {
+    // If word was previously glossed (in this session OR restored from remount)
+    // — toggle furigana rather than reopening the tray
+    if (clickedWord.isLazyLoaded || wasGlossedRef.current[clickedWord.kanji]) {
       setWordData(prev => prev.map(para => para.map(w => {
         if (w.id !== wordId) return w;
-        if (!w.showFurigana)                    return { ...w, showFurigana: true, showTranslation: false };
+        if (!w.showFurigana)                      return { ...w, showFurigana: true, showTranslation: false };
         if (w.showFurigana && !w.showTranslation) return { ...w, showTranslation: true };
         return { ...w, showFurigana: false, showTranslation: false };
       })));
@@ -408,6 +409,9 @@ export default function ReadingPage({
 
           <p style={{ fontSize: '0.85rem', color: 'var(--ink-faint)' }}>
             Tap any word you don't know to see more information.
+          </p>
+          <p style={{ fontSize: '0.72rem', color: 'var(--ink-faint)', marginTop: '0.25rem' }}>
+            Text source: <a href="https://www.minnanokyozai.jp/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-faint)' }}>みんなの教材サイト (Minna no Kyozai)</a> — used for educational research purposes.
           </p>
         </div>
 

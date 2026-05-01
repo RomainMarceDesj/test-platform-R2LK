@@ -106,6 +106,7 @@ export default function RadicalSelector({
           placeholder="Search by name or character…"
           value={searchQuery}
           onChange={handleSearchChange}
+          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
         />
       </div>
 

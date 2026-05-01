@@ -36,8 +36,18 @@ function normaliseReading(s) {
 }
 
 function buildMcOptions(correct, pool, getVal, count = 3) {
-  const others = shuffle(pool.filter(w => w !== correct && TARGET_KANJI[w]));
-  const distractors = others.slice(0, count).map(w => getVal(TARGET_KANJI[w]));
+  // Deduplicate by value — no option should appear twice
+  const seen = new Set([correct]);
+  const distractors = [];
+  const candidates = shuffle(pool.filter(w => TARGET_KANJI[w]));
+  for (const w of candidates) {
+    if (distractors.length >= count) break;
+    const val = getVal(TARGET_KANJI[w]);
+    if (val && !seen.has(val)) {
+      seen.add(val);
+      distractors.push(val);
+    }
+  }
   return shuffle([correct, ...distractors]);
 }
 
@@ -65,8 +75,9 @@ function buildTestItems(glossLog, wasGlossed, midQuizWord) {
 // ── Reading+Meaning combined question ────────────────────────────────────────
 
 function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
-  const [readingAnswer, setReadingAnswer] = useState(null);
-  const [meaningAnswer, setMeaningAnswer] = useState(null);
+  // Store selected INDEX not value — prevents duplicate-value highlight bug
+  const [readingIdx, setReadingIdx] = useState(null);
+  const [meaningIdx, setMeaningIdx] = useState(null);
 
   const readingOptions = useMemo(() => {
     if (!config?.reading) return [];
@@ -78,9 +89,11 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
     return [...buildMcOptions(config.meaning, allWords, c => c.meaning), "I don't know"];
   }, [word]); // eslint-disable-line
 
-  const canSubmit = readingAnswer !== null && meaningAnswer !== null;
+  const canSubmit = readingIdx !== null && meaningIdx !== null;
 
   const handleSubmit = () => {
+    const readingAnswer = readingOptions[readingIdx] ?? null;
+    const meaningAnswer = meaningOptions[meaningIdx] ?? null;
     onAnswer({
       word,
       question_type: 'reading_meaning',
@@ -111,6 +124,17 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ textAlign: 'center' }}>
         <span style={{ fontFamily: 'var(--font-jp)', fontSize: '2.5rem', letterSpacing: '0.05em' }}>{word}</span>
+        {config && (
+          <div style={{ marginTop: '0.35rem', fontFamily: 'var(--font-jp)', fontSize: '0.95rem', color: 'var(--ink-muted)' }}>
+            {config.blankDisplay && (
+              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{config.blankDisplay}</span>
+            )}
+            {' '}
+            <span style={{ fontSize: '0.85rem' }}>
+              ({config.reading}{config.reading && config.meaning ? ', ' : ''}{config.meaning})
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Reading */}
@@ -121,9 +145,9 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
         <div className="mc-options">
           {readingOptions.map((opt, i) => (
             <button
-              key={opt}
-              className={`mc-option ${readingAnswer === opt ? 'selected' : ''}`}
-              onClick={() => setReadingAnswer(opt)}
+              key={i}
+              className={`mc-option ${readingIdx === i ? 'selected' : ''}`}
+              onClick={() => setReadingIdx(i)}
             >
               <span className="mc-key">
                 {opt === "I don't know" ? '?' : String.fromCharCode(65 + i)}
@@ -149,9 +173,9 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
         <div className="mc-options">
           {meaningOptions.map((opt, i) => (
             <button
-              key={opt}
-              className={`mc-option ${meaningAnswer === opt ? 'selected' : ''}`}
-              onClick={() => setMeaningAnswer(opt)}
+              key={i}
+              className={`mc-option ${meaningIdx === i ? 'selected' : ''}`}
+              onClick={() => setMeaningIdx(i)}
             >
               <span className="mc-key">
                 {opt === "I don't know" ? '?' : String.fromCharCode(65 + i)}
