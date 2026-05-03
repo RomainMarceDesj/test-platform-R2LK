@@ -19,6 +19,7 @@ import {
   NON_TARGET_RADICAL_WORDS,
   WORD_PRIORITY_ORDER,
   IN_TEXT_RADICALS,
+  IN_TEXT_RADICALS_META,
   EN_SENTENCE_CONTEXT,
   TRANSFER_KANJI,
   API_BASE,
@@ -54,21 +55,21 @@ function buildMcOptions(correct, pool, getVal, count = 3) {
   return shuffle([correct, ...distractors]);
 }
 
-// Pick N distractor radicals: prefer in-text radicals NOT in correct/searchable set,
-// fall back to a wider pool if needed.
+// Pick N distractor radicals with full metadata (radical, stroke_count, english).
+// Uses IN_TEXT_RADICALS_META so distractors always have correct stroke_count for grouping.
 function pickDistractors(correctRadicals, searchableComponents, count) {
   const exclude = new Set([
     ...correctRadicals,
     ...(searchableComponents ?? []),
   ]);
-  const inTextPool = IN_TEXT_RADICALS.filter(r => !exclude.has(r));
+  const inTextPool = IN_TEXT_RADICALS_META.filter(r => !exclude.has(r.radical));
   const shuffled = shuffle(inTextPool);
-  if (shuffled.length >= count) return shuffled.slice(0, count);
-
-  // Fallback: extend with common non-text radicals if pool is too small
-  const fallback = ['火', '水', '土', '心', '女', '小', '大', '山', '雨', '門', '行', '足', '車', '金'];
-  const extra = fallback.filter(r => !exclude.has(r) && !shuffled.includes(r));
-  return [...shuffled, ...shuffle(extra)].slice(0, count);
+  return shuffled.slice(0, count).map(r => ({
+    radical: r.radical,
+    stroke_count: r.stroke_count,
+    primary_english: r.primary_english,
+    english_names: [r.primary_english],
+  }));
 }
 
 // ── Pool building ─────────────────────────────────────────────────────────────
@@ -80,10 +81,35 @@ function buildTestItems(glossLog, midQuizWord) {
 
   const ordered = WORD_PRIORITY_ORDER.filter(item => glossedSet.has(item.word));
 
-  // Split by type, preserving priority order
-  // Skew: 4 radical words (8 questions: strict + soft) + 1 reading_meaning + 2 transfer = 11 total
-  const radicalWords = ordered.filter(item => item.type === 'radical').slice(0, 4);
-  const rmWords      = ordered.filter(item => item.type === 'reading_meaning').slice(0, 1);
+  // Target words (in TARGET_KANJI) are primary. Non-target words from
+  // NON_TARGET_RADICAL_WORDS or other glossed words act as fallback when
+  // the target pool runs short. Each item is tagged with is_target so the
+  // analysis can filter accordingly.
+  const isTargetWord = (w) => !!TARGET_KANJI[w];
+
+  const targetRadicals  = ordered.filter(i => i.type === 'radical' && isTargetWord(i.word));
+  const targetRM        = ordered.filter(i => i.type === 'reading_meaning' && isTargetWord(i.word));
+  const fallbackRadicals = ordered.filter(i => i.type === 'radical' && !isTargetWord(i.word));
+  const fallbackRM       = ordered.filter(i => i.type === 'reading_meaning' && !isTargetWord(i.word));
+
+  // Target distribution: 3 radical words + 2 RM words = 5 total
+  // Fill from target pool first, then fall back to non-target words if needed.
+  const radicalWords = [
+    ...targetRadicals.slice(0, 3),
+    ...fallbackRadicals.slice(0, Math.max(0, 3 - targetRadicals.length)),
+  ];
+  const rmWords = [
+    ...targetRM.slice(0, 2),
+    ...fallbackRM.slice(0, Math.max(0, 2 - targetRM.length)),
+  ];
+
+  console.log('[BUILD-TEST] glossed words:', [...glossedSet]);
+  console.log('[BUILD-TEST] ordered:', ordered.map(o => `${o.word}(${o.type})`));
+  console.log('[BUILD-TEST] mid-quiz word excluded:', midQuizWord);
+  console.log('[BUILD-TEST] target radicals:', targetRadicals.map(w => w.word));
+  console.log('[BUILD-TEST] fallback radicals (non-target):', fallbackRadicals.map(w => w.word));
+  console.log('[BUILD-TEST] radical words selected:', radicalWords.map(w => `${w.word}${isTargetWord(w.word) ? '' : '*fallback'}`));
+  console.log('[BUILD-TEST] reading_meaning words selected:', rmWords.map(w => `${w.word}${isTargetWord(w.word) ? '' : '*fallback'}`));
 
   const items = [];
 
@@ -92,6 +118,7 @@ function buildTestItems(glossLog, midQuizWord) {
     phase: 'strict_radical',
     word: item.word,
     config: configFor(item.word),
+    is_target: isTargetWord(item.word),
   }));
 
   // 4-6: Soft on the same words (different format)
@@ -99,6 +126,7 @@ function buildTestItems(glossLog, midQuizWord) {
     phase: 'soft_radical',
     word: item.word,
     config: configFor(item.word),
+    is_target: isTargetWord(item.word),
   }));
 
   // 7-8: Reading + Meaning on different words
@@ -106,6 +134,7 @@ function buildTestItems(glossLog, midQuizWord) {
     phase: 'reading_meaning',
     word: item.word,
     config: configFor(item.word),
+    is_target: isTargetWord(item.word),
   }));
 
   // 9-10: Transfer (always present, regardless of glossing)
@@ -138,21 +167,18 @@ function StrictRadicalQ({ word, config, onAnswer }) {
         const directChars  = directRads.map(r => r.radical);
         const searchable   = breakdown?.searchable_components ?? directChars;
 
-        // 6 distractor radicals — wrong answers from in-text pool, excluding searchable
-        const distractorChars = pickDistractors(directChars, searchable, 6);
+        // Build stroke_count lookup from hardcoded metadata
+        const strokeMap = Object.fromEntries(IN_TEXT_RADICALS_META.map(r => [r.radical, r.stroke_count]));
 
-        // Fetch metadata for distractors — include stroke_count for proper grouping
-        const enrichedDistractors = await Promise.all(distractorChars.map(async (rc) => {
-          try {
-            const r = await axios.post(`${API_BASE}/api/radicals/search`, { query: rc });
-            const found = r.data?.find(x => x.radical === rc);
-            if (found) return found;
-          } catch (_) {}
-          return { radical: rc, english_names: [''], primary_english: '', stroke_count: 99 };
-        }));
+        // 6 distractor radicals — full metadata from hardcoded list
+        const enrichedDistractors = pickDistractors(directChars, searchable, 6);
 
         const allCandidates = [
-          ...directRads.map(r => ({ ...r, is_direct: true })),
+          ...directRads.map(r => ({
+            ...r,
+            is_direct: true,
+            stroke_count: strokeMap[r.radical] ?? r.stroke_count ?? 99,
+          })),
           ...enrichedDistractors.map(r => ({ ...r, is_direct: false })),
         ];
 
@@ -185,7 +211,7 @@ function StrictRadicalQ({ word, config, onAnswer }) {
       word,
       question_type:    'strict_radical',
       target_kanji:     targetChar,
-      blank_display:    config?.blankDisplay ?? 'O',
+      blank_display:    config?.blankDisplay ?? '[-]',
       selected_radicals: selected,
       correct_radicals:  correctDirect,
       directCorrect, directMissed, wrongSelected,
@@ -244,19 +270,17 @@ function SoftRadicalQ({ word, config, onAnswer }) {
         const directChars = directRads.map(r => r.radical);
         const searchable  = breakdown?.searchable_components ?? directChars;
 
+        const strokeMap = Object.fromEntries(IN_TEXT_RADICALS_META.map(r => [r.radical, r.stroke_count]));
+
         // 2 distractors only for soft test
-        const distractorChars = pickDistractors(directChars, searchable, 2);
-        const enrichedDistractors = await Promise.all(distractorChars.map(async (rc) => {
-          try {
-            const r = await axios.post(`${API_BASE}/api/radicals/search`, { query: rc });
-            return r.data?.find(x => x.radical === rc) ?? { radical: rc, english_names: [''] };
-          } catch (_) {
-            return { radical: rc, english_names: [''] };
-          }
-        }));
+        const enrichedDistractors = pickDistractors(directChars, searchable, 2);
 
         const all = shuffle([
-          ...directRads.map(r => ({ ...r, is_correct: true })),
+          ...directRads.map(r => ({
+            ...r,
+            is_correct: true,
+            stroke_count: strokeMap[r.radical] ?? r.stroke_count ?? 99,
+          })),
           ...enrichedDistractors.map(r => ({ ...r, is_correct: false })),
         ]);
 
@@ -852,16 +876,20 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
 
         <div className="card">
           {current.phase === 'strict_radical' && (
-            <StrictRadicalQ key={`s${currentIdx}`} word={current.word} config={current.config} onAnswer={handleAnswer} />
+            <StrictRadicalQ key={`s${currentIdx}`} word={current.word} config={current.config}
+              onAnswer={(r) => handleAnswer({ ...r, is_target: current.is_target })} />
           )}
           {current.phase === 'soft_radical' && (
-            <SoftRadicalQ key={`o${currentIdx}`} word={current.word} config={current.config} onAnswer={handleAnswer} />
+            <SoftRadicalQ key={`o${currentIdx}`} word={current.word} config={current.config}
+              onAnswer={(r) => handleAnswer({ ...r, is_target: current.is_target })} />
           )}
           {current.phase === 'reading_meaning' && (
-            <ReadingMeaningQ key={`rm${currentIdx}`} word={current.word} config={current.config} allWords={allWords} onAnswer={handleAnswer} />
+            <ReadingMeaningQ key={`rm${currentIdx}`} word={current.word} config={current.config} allWords={allWords}
+              onAnswer={(r) => handleAnswer({ ...r, is_target: current.is_target })} />
           )}
           {current.phase === 'transfer' && (
-            <TransferQ key={`t${currentIdx}`} transfer={current.transfer} onAnswer={handleAnswer} />
+            <TransferQ key={`t${currentIdx}`} transfer={current.transfer}
+              onAnswer={(r) => handleAnswer({ ...r, is_target: false, is_transfer: true })} />
           )}
         </div>
 
