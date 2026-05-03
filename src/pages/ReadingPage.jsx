@@ -108,7 +108,56 @@ export default function ReadingPage({
         const res = await axios.post(`${API_BASE}/analyze`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        setWordData(res.data.data ?? []);
+        let loadedData = res.data.data ?? [];
+
+        // ── Restore furigana/translation for previously-glossed words on remount ──
+        if (isRemount && wasGlossedRef.current && Object.keys(wasGlossedRef.current).length > 0) {
+          console.log('[REMOUNT] Restoring furigana/translation for glossed words:', Object.keys(wasGlossedRef.current));
+          // Find each glossed word's location in the data and fetch its info
+          const wordsToRestore = [];
+          for (const para of loadedData) {
+            for (const w of para) {
+              if (w.type === 'word' && wasGlossedRef.current[w.kanji]) {
+                wordsToRestore.push({ id: w.id, kanji: w.kanji });
+              }
+            }
+          }
+          // Fetch info for each in parallel
+          const fetched = await Promise.all(wordsToRestore.map(async (entry) => {
+            try {
+              const info = await axios.post(`${API_BASE}/get_word_info`, {
+                word: entry.kanji,
+                user_id: participantId,
+                app_version: appVersion,
+              });
+              return { ...entry, furigana: info.data.furigana, translation: info.data.translation };
+            } catch (e) {
+              console.error(`Failed to restore info for ${entry.kanji}:`, e);
+              return null;
+            }
+          }));
+          // Apply to loadedData
+          const restoredMap = {};
+          for (const r of fetched) {
+            if (r) restoredMap[r.id] = r;
+          }
+          loadedData = loadedData.map(para => para.map(w => {
+            if (restoredMap[w.id]) {
+              return {
+                ...w,
+                furigana: restoredMap[w.id].furigana,
+                translation: restoredMap[w.id].translation,
+                isLazyLoaded: true,
+                showFurigana: true,
+                showTranslation: false,
+              };
+            }
+            return w;
+          }));
+          console.log(`[REMOUNT] Restored ${Object.keys(restoredMap).length} words`);
+        }
+
+        setWordData(loadedData);
       } catch (e) {
         console.error('Failed to load text:', e);
       } finally {
@@ -193,12 +242,11 @@ export default function ReadingPage({
     }
     if (!clickedWord || clickedWord.type !== 'word') return;
 
-    // If word was previously glossed (in this session OR restored from remount)
-    // — toggle furigana rather than reopening the tray
+    // If word already loaded OR was glossed in a prior session phase — toggle furigana/translation, no tray
     if (clickedWord.isLazyLoaded || wasGlossedRef.current[clickedWord.kanji]) {
       setWordData(prev => prev.map(para => para.map(w => {
         if (w.id !== wordId) return w;
-        if (!w.showFurigana)                      return { ...w, showFurigana: true, showTranslation: false };
+        if (!w.showFurigana)                    return { ...w, showFurigana: true, showTranslation: false };
         if (w.showFurigana && !w.showTranslation) return { ...w, showTranslation: true };
         return { ...w, showFurigana: false, showTranslation: false };
       })));
@@ -409,9 +457,6 @@ export default function ReadingPage({
 
           <p style={{ fontSize: '0.85rem', color: 'var(--ink-faint)' }}>
             Tap any word you don't know to see more information.
-          </p>
-          <p style={{ fontSize: '0.72rem', color: 'var(--ink-faint)', marginTop: '0.25rem' }}>
-            Text source: <a href="https://www.minnanokyozai.jp/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-faint)' }}>みんなの教材サイト (Minna no Kyozai)</a> — used for educational research purposes.
           </p>
         </div>
 

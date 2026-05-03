@@ -81,8 +81,9 @@ function buildTestItems(glossLog, midQuizWord) {
   const ordered = WORD_PRIORITY_ORDER.filter(item => glossedSet.has(item.word));
 
   // Split by type, preserving priority order
-  const radicalWords = ordered.filter(item => item.type === 'radical').slice(0, 3);
-  const rmWords      = ordered.filter(item => item.type === 'reading_meaning').slice(0, 2);
+  // Skew: 4 radical words (8 questions: strict + soft) + 1 reading_meaning + 2 transfer = 11 total
+  const radicalWords = ordered.filter(item => item.type === 'radical').slice(0, 4);
+  const rmWords      = ordered.filter(item => item.type === 'reading_meaning').slice(0, 1);
 
   const items = [];
 
@@ -184,7 +185,7 @@ function StrictRadicalQ({ word, config, onAnswer }) {
       word,
       question_type:    'strict_radical',
       target_kanji:     targetChar,
-      blank_display:    config?.blankDisplay ?? '[–]',
+      blank_display:    config?.blankDisplay ?? 'O',
       selected_radicals: selected,
       correct_radicals:  correctDirect,
       directCorrect, directMissed, wrongSelected,

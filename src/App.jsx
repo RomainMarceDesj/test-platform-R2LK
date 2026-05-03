@@ -15,7 +15,7 @@
  *   which calls /api/thesis/participant/:id/status.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import OnboardingPage   from './pages/OnboardingPage';
 import TutorialPage     from './pages/TutorialPage';
 import ScreeningPage    from './pages/ScreeningPage';
@@ -62,6 +62,21 @@ export const PHASES = {
 
 export default function App() {
   const [phase, setPhase] = useState(PHASES.ONBOARDING);
+
+  // Scroll to top on every phase change — fixes mobile mid-page start bug
+  // Uses both window and document.documentElement for cross-browser/mobile reliability,
+  // and runs after a microtask delay to ensure React has committed the new render
+  useEffect(() => {
+    const scrollTop = () => {
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+    scrollTop();
+    // Run again after a short delay in case the new content takes a frame to render
+    const t = setTimeout(scrollTop, 50);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   // Participant info — set during onboarding/screening
   const [participant, setParticipant] = useState({
