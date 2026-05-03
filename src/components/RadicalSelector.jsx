@@ -18,6 +18,7 @@ export default function RadicalSelector({
   candidateRadicals = [],
   onSubmit,
   submitLabel = 'Submit',
+  maxSelections = null,    // optional cap on number of radicals selectable
 }) {
   const [selected, setSelected]           = useState(new Set());
   const [searchQuery, setSearchQuery]     = useState('');
@@ -61,11 +62,16 @@ export default function RadicalSelector({
   const toggleRadical = useCallback((radical) => {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(radical)) next.delete(radical);
-      else next.add(radical);
+      if (next.has(radical)) {
+        next.delete(radical);
+      } else {
+        // Enforce maxSelections cap
+        if (maxSelections != null && next.size >= maxSelections) return prev;
+        next.add(radical);
+      }
       return next;
     });
-  }, []);
+  }, [maxSelections]);
 
   const handleSearchChange = (e) => {
     const val = e.target.value;
@@ -183,6 +189,13 @@ export default function RadicalSelector({
           onBlur={e => e.target.style.borderColor = 'var(--paper-border)'}
         />
       </div>
+
+      {/* Selection count when capped */}
+      {maxSelections != null && (
+        <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', textAlign: 'right', margin: 0 }}>
+          Selected: {selected.size} / {maxSelections}
+        </p>
+      )}
 
       {/* Submit */}
       <button className="btn btn-primary btn-full" onClick={handleSubmit}>

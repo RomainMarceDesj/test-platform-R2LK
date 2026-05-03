@@ -1,17 +1,14 @@
 /**
- * KanjiTestPage.jsx — UNIFIED TEST
- * =================================
- * Single post-reading test that combines radical noticing AND reading/meaning
- * questions into one continuous flow.
- *
- *   Pool:  glossed words ∩ WORD_PRIORITY_ORDER, mid-quiz word excluded
- *   Order: WORD_PRIORITY_ORDER
- *   Type:  fixed per word (item.type = 'radical' | 'reading_meaning')
- *   Count: number of glossed eligible words, capped at 8
+ * KanjiTestPage.jsx — UNIFIED 10-QUESTION TEST
+ * =============================================
+ * Phase structure (in order):
+ *   1-3  Strict radical (Option A)        — meaning + sentence context, blanked kanji, large distractor pool
+ *   4-6  Soft radical (Idea C)            — same 3 words as 1-3, no kanji shown, small pre-populated list
+ *   7-8  Reading & Meaning                — different words, MC selectors
+ *   9-10 Transfer (novel kanji)           — 紹 then 拊, kanji visible, decompose
  *
  * All display strings come from hardcoded fields in studyConfig.js
- * (postTestHeader, testDisplayLine, blankDisplay, reading, meaning).
- * No dynamic /get_word_info fetches for known words.
+ * (postTestHeader, testDisplayLine, EN_SENTENCE_CONTEXT, TRANSFER_KANJI).
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -21,6 +18,9 @@ import {
   TARGET_KANJI,
   NON_TARGET_RADICAL_WORDS,
   WORD_PRIORITY_ORDER,
+  IN_TEXT_RADICALS,
+  EN_SENTENCE_CONTEXT,
+  TRANSFER_KANJI,
   API_BASE,
 } from '../config/studyConfig';
 
@@ -35,7 +35,10 @@ function shuffle(arr) {
   return a;
 }
 
-// Build distractors from TARGET_KANJI pool, deduplicated by value
+function configFor(word) {
+  return TARGET_KANJI[word] ?? NON_TARGET_RADICAL_WORDS?.[word] ?? null;
+}
+
 function buildMcOptions(correct, pool, getVal, count = 3) {
   const seen = new Set([correct]);
   const distractors = [];
@@ -51,8 +54,21 @@ function buildMcOptions(correct, pool, getVal, count = 3) {
   return shuffle([correct, ...distractors]);
 }
 
-function configFor(word) {
-  return TARGET_KANJI[word] ?? NON_TARGET_RADICAL_WORDS?.[word] ?? null;
+// Pick N distractor radicals: prefer in-text radicals NOT in correct/searchable set,
+// fall back to a wider pool if needed.
+function pickDistractors(correctRadicals, searchableComponents, count) {
+  const exclude = new Set([
+    ...correctRadicals,
+    ...(searchableComponents ?? []),
+  ]);
+  const inTextPool = IN_TEXT_RADICALS.filter(r => !exclude.has(r));
+  const shuffled = shuffle(inTextPool);
+  if (shuffled.length >= count) return shuffled.slice(0, count);
+
+  // Fallback: extend with common non-text radicals if pool is too small
+  const fallback = ['火', '水', '土', '心', '女', '小', '大', '山', '雨', '門', '行', '足', '車', '金'];
+  const extra = fallback.filter(r => !exclude.has(r) && !shuffled.includes(r));
+  return [...shuffled, ...shuffle(extra)].slice(0, count);
 }
 
 // ── Pool building ─────────────────────────────────────────────────────────────
@@ -62,17 +78,335 @@ function buildTestItems(glossLog, midQuizWord) {
     (glossLog ?? []).map(e => e.word).filter(w => w !== midQuizWord)
   );
 
-  return WORD_PRIORITY_ORDER
-    .filter(item => glossedSet.has(item.word))
-    .slice(0, 8)
-    .map(item => ({
-      word: item.word,
-      type: item.type,
-      config: configFor(item.word),
-    }));
+  const ordered = WORD_PRIORITY_ORDER.filter(item => glossedSet.has(item.word));
+
+  // Split by type, preserving priority order
+  const radicalWords = ordered.filter(item => item.type === 'radical').slice(0, 3);
+  const rmWords      = ordered.filter(item => item.type === 'reading_meaning').slice(0, 2);
+
+  const items = [];
+
+  // 1-3: Strict on radicalWords
+  radicalWords.forEach(item => items.push({
+    phase: 'strict_radical',
+    word: item.word,
+    config: configFor(item.word),
+  }));
+
+  // 4-6: Soft on the same words (different format)
+  radicalWords.forEach(item => items.push({
+    phase: 'soft_radical',
+    word: item.word,
+    config: configFor(item.word),
+  }));
+
+  // 7-8: Reading + Meaning on different words
+  rmWords.forEach(item => items.push({
+    phase: 'reading_meaning',
+    word: item.word,
+    config: configFor(item.word),
+  }));
+
+  // 9-10: Transfer (always present, regardless of glossing)
+  TRANSFER_KANJI.forEach(t => items.push({
+    phase: 'transfer',
+    word: t.kanji,
+    transfer: t,
+  }));
+
+  return items;
 }
 
-// ── Reading + Meaning question (single screen, two MC selectors) ─────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// STRICT RADICAL — meaning + sentence cue, blanked kanji, 6 distractors
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function StrictRadicalQ({ word, config, onAnswer }) {
+  const targetChar = config?.testKanji ?? word[0];
+  const [radicals, setRadicals]       = useState([]);
+  const [correctDirect, setCorrectDirect]     = useState([]);
+  const [correctIndirect, setCorrectIndirect] = useState([]);
+  const [loading, setLoading]         = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const breakdownRes = await axios.post(`${API_BASE}/api/radicals/for-kanji`, { word: targetChar });
+        const breakdown    = breakdownRes.data?.[0];
+        const directRads   = breakdown?.radicals ?? [];
+        const directChars  = directRads.map(r => r.radical);
+        const searchable   = breakdown?.searchable_components ?? directChars;
+
+        // 6 distractor radicals — wrong answers from in-text pool, excluding searchable
+        const distractorChars = pickDistractors(directChars, searchable, 6);
+
+        // Fetch metadata for distractors — include stroke_count for proper grouping
+        const enrichedDistractors = await Promise.all(distractorChars.map(async (rc) => {
+          try {
+            const r = await axios.post(`${API_BASE}/api/radicals/search`, { query: rc });
+            const found = r.data?.find(x => x.radical === rc);
+            if (found) return found;
+          } catch (_) {}
+          return { radical: rc, english_names: [''], primary_english: '', stroke_count: 99 };
+        }));
+
+        const allCandidates = [
+          ...directRads.map(r => ({ ...r, is_direct: true })),
+          ...enrichedDistractors.map(r => ({ ...r, is_direct: false })),
+        ];
+
+        setRadicals(shuffle(allCandidates));
+        setCorrectDirect(directChars);
+        setCorrectIndirect([]); // strict test has no "indirect" — only correct or wrong
+      } catch (e) {
+        console.error('StrictRadicalQ load failed:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [targetChar]); // eslint-disable-line
+
+  const handleSubmit = ({ selected, used_search, search_queries, time_to_submit_ms, free_text_radicals }) => {
+    const selectedSet  = new Set(selected);
+    const directSet    = new Set(correctDirect);
+    const directCorrect = correctDirect.filter(r => selectedSet.has(r));
+    const directMissed  = correctDirect.filter(r => !selectedSet.has(r));
+    const wrongSelected = selected.filter(r => !directSet.has(r));
+    const totalDirect   = correctDirect.length || 1;
+    const directScore   = directCorrect.length / totalDirect;
+    const totalScore    = Math.max(0, Math.min(1,
+      (directCorrect.length - wrongSelected.length * 0.25) / totalDirect
+    ));
+    const noData = !correctDirect.length;
+
+    onAnswer({
+      word,
+      question_type:    'strict_radical',
+      target_kanji:     targetChar,
+      blank_display:    config?.blankDisplay ?? '[–]',
+      selected_radicals: selected,
+      correct_radicals:  correctDirect,
+      directCorrect, directMissed, wrongSelected,
+      direct_score: noData ? null : directScore,
+      total_score:  noData ? null : totalScore,
+      no_data: noData,
+      used_search, search_queries, time_to_submit_ms,
+      free_text_radicals: free_text_radicals ?? null,
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <h2 style={{ fontSize: '1.1rem', lineHeight: 1.4 }}>
+          {config?.postTestHeader
+            ?? `What radicals did you remember in the kanji for "${config?.radicalKanjiMeaning ?? word}"`}
+        </h2>
+        <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)' }}>
+          in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+            {config?.testDisplayLine ?? config?.blankDisplay ?? word}
+          </span>
+        </div>
+        {EN_SENTENCE_CONTEXT[word] && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', fontStyle: 'italic', lineHeight: 1.5 }}>
+            ({EN_SENTENCE_CONTEXT[word]})
+          </p>
+        )}
+      </div>
+      {loading ? (
+        <p style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '1rem' }}>Loading…</p>
+      ) : (
+        <RadicalSelector candidateRadicals={radicals} onSubmit={handleSubmit} submitLabel="Next →" maxSelections={5} />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SOFT RADICAL — no kanji shown, pre-populated list with 2 distractors, remove the wrong ones
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function SoftRadicalQ({ word, config, onAnswer }) {
+  const targetChar = config?.testKanji ?? word[0];
+  const [items, setItems] = useState([]); // {radical, english_names, is_correct}
+  const [keptSet, setKeptSet] = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const [startTs] = useState(Date.now());
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const breakdownRes = await axios.post(`${API_BASE}/api/radicals/for-kanji`, { word: targetChar });
+        const breakdown   = breakdownRes.data?.[0];
+        const directRads  = breakdown?.radicals ?? [];
+        const directChars = directRads.map(r => r.radical);
+        const searchable  = breakdown?.searchable_components ?? directChars;
+
+        // 2 distractors only for soft test
+        const distractorChars = pickDistractors(directChars, searchable, 2);
+        const enrichedDistractors = await Promise.all(distractorChars.map(async (rc) => {
+          try {
+            const r = await axios.post(`${API_BASE}/api/radicals/search`, { query: rc });
+            return r.data?.find(x => x.radical === rc) ?? { radical: rc, english_names: [''] };
+          } catch (_) {
+            return { radical: rc, english_names: [''] };
+          }
+        }));
+
+        const all = shuffle([
+          ...directRads.map(r => ({ ...r, is_correct: true })),
+          ...enrichedDistractors.map(r => ({ ...r, is_correct: false })),
+        ]);
+
+        setItems(all);
+        setKeptSet(new Set(all.map(x => x.radical))); // start with all kept, user removes
+      } catch (e) {
+        console.error('SoftRadicalQ load failed:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [targetChar]);
+
+  const [idkSelected, setIdkSelected] = useState(false);
+
+  const removedCount = items.length - keptSet.size;
+
+  const toggleItem = (r) => {
+    setKeptSet(prev => {
+      const next = new Set(prev);
+      if (next.has(r)) {
+        // Trying to remove — only allowed if under the cap of 2
+        if (removedCount >= 2) return prev;
+        next.delete(r);
+      } else {
+        next.add(r);
+      }
+      return next;
+    });
+  };
+
+  const handleSubmit = () => {
+    const correctRadicals = items.filter(i => i.is_correct).map(i => i.radical);
+    const distractorRadicals = items.filter(i => !i.is_correct).map(i => i.radical);
+    const correctlyKept = correctRadicals.filter(r => keptSet.has(r));
+    const incorrectlyRemoved = correctRadicals.filter(r => !keptSet.has(r));
+    const correctlyRemoved = distractorRadicals.filter(r => !keptSet.has(r));
+    const incorrectlyKept = distractorRadicals.filter(r => keptSet.has(r));
+
+    const totalCorrect = correctRadicals.length || 1;
+    const totalDistractors = distractorRadicals.length || 1;
+    const score = (correctlyKept.length / totalCorrect + correctlyRemoved.length / totalDistractors) / 2;
+
+    onAnswer({
+      word,
+      question_type: 'soft_radical',
+      target_kanji:  targetChar,
+      kept_radicals:    [...keptSet],
+      correct_radicals: correctRadicals,
+      distractor_radicals: distractorRadicals,
+      correctlyKept, incorrectlyRemoved, correctlyRemoved, incorrectlyKept,
+      idk_selected: idkSelected,
+      score: idkSelected ? null : score,
+      time_to_submit_ms: Date.now() - startTs,
+    });
+  };
+
+  if (loading) {
+    return <p style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '1rem' }}>Loading…</p>;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <h2 style={{ fontSize: '1.05rem', lineHeight: 1.4 }}>
+          From this list, remove any radicals that were NOT in the kanji for{' '}
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+            "{config?.radicalKanjiMeaning ?? config?.meaning ?? word}"
+          </span>
+        </h2>
+        {config?.testDisplayLine && (
+          <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)' }}>
+            in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+              {config.testDisplayLine}
+            </span>
+          </div>
+        )}
+        {EN_SENTENCE_CONTEXT[word] && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', fontStyle: 'italic', lineHeight: 1.5 }}>
+            ({EN_SENTENCE_CONTEXT[word]})
+          </p>
+        )}
+        <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', marginTop: '0.3rem' }}>
+          You can remove up to 2 radicals. Tap a radical to remove or restore it.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        {items.map((it, i) => {
+          const kept = keptSet.has(it.radical);
+          const atCap = !kept ? false : removedCount >= 2; // can't remove more
+          return (
+            <button
+              key={i}
+              onClick={() => toggleItem(it.radical)}
+              disabled={atCap}
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1.5px solid var(--paper-border)',
+                borderRadius: 'var(--radius-md)',
+                background: kept ? 'white' : 'var(--paper-warm)',
+                opacity: kept ? (atCap ? 0.7 : 1) : 0.4,
+                textDecoration: kept ? 'none' : 'line-through',
+                cursor: atCap ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.3rem' }}>{it.radical}</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                {it.english_names?.[0] || it.primary_english || ''}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', textAlign: 'right' }}>
+        Removed: {removedCount} / 2
+      </p>
+
+      <button
+        onClick={() => setIdkSelected(prev => !prev)}
+        style={{
+          alignSelf: 'flex-start',
+          padding: '0.4rem 0.8rem',
+          fontSize: '0.8rem',
+          background: idkSelected ? 'var(--paper-warm)' : 'transparent',
+          border: idkSelected ? '1.5px solid var(--accent)' : '1px solid var(--paper-border)',
+          borderRadius: 'var(--radius-md)',
+          color: idkSelected ? 'var(--accent)' : 'var(--ink-faint)',
+          cursor: 'pointer',
+          fontStyle: 'italic',
+        }}
+      >
+        {idkSelected ? '✓ ' : ''}I don't know which to remove
+      </button>
+
+      <button className="btn btn-primary btn-full" onClick={handleSubmit}>
+        Next →
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// READING + MEANING (unchanged from previous version)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
   const [readingIdx, setReadingIdx] = useState(null);
@@ -123,67 +457,41 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ textAlign: 'center' }}>
         <span style={{ fontFamily: 'var(--font-jp)', fontSize: '2.5rem', letterSpacing: '0.05em' }}>{word}</span>
-        <div style={{ marginTop: '0.35rem', fontFamily: 'var(--font-jp)', fontSize: '0.95rem', color: 'var(--ink-muted)' }}>
-          {config.blankDisplay && (
-            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{config.blankDisplay}</span>
-          )}
-          {' '}
-          <span style={{ fontSize: '0.85rem' }}>
-            ({config.reading}{config.reading && config.meaning ? ', ' : ''}{config.meaning})
-          </span>
-        </div>
+
       </div>
 
-      {/* Reading */}
       <div>
-        <p style={{ fontSize: '0.82rem', color: 'var(--ink-faint)', marginBottom: '0.5rem' }}>
-          Select the correct reading:
-        </p>
+        <p style={{ fontSize: '0.82rem', color: 'var(--ink-faint)', marginBottom: '0.5rem' }}>Select the correct reading:</p>
         <div className="mc-options">
           {readingOptions.map((opt, i) => (
-            <button
-              key={i}
+            <button key={i}
               className={`mc-option ${readingIdx === i ? 'selected' : ''}`}
-              onClick={() => setReadingIdx(i)}
-            >
-              <span className="mc-key">
-                {opt === "I don't know" ? '?' : String.fromCharCode(65 + i)}
-              </span>
+              onClick={() => setReadingIdx(i)}>
+              <span className="mc-key">{opt === "I don't know" ? '?' : String.fromCharCode(65 + i)}</span>
               <span style={{
                 fontFamily: /[\u3000-\u9FFF]/.test(opt) ? 'var(--font-jp)' : 'inherit',
                 fontSize: '0.95rem',
                 fontStyle: opt === "I don't know" ? 'italic' : 'normal',
                 opacity: opt === "I don't know" ? 0.7 : 1,
-              }}>
-                {opt}
-              </span>
+              }}>{opt}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Meaning */}
       <div>
-        <p style={{ fontSize: '0.82rem', color: 'var(--ink-faint)', marginBottom: '0.5rem' }}>
-          Select the correct meaning:
-        </p>
+        <p style={{ fontSize: '0.82rem', color: 'var(--ink-faint)', marginBottom: '0.5rem' }}>Select the correct meaning:</p>
         <div className="mc-options">
           {meaningOptions.map((opt, i) => (
-            <button
-              key={i}
+            <button key={i}
               className={`mc-option ${meaningIdx === i ? 'selected' : ''}`}
-              onClick={() => setMeaningIdx(i)}
-            >
-              <span className="mc-key">
-                {opt === "I don't know" ? '?' : String.fromCharCode(65 + i)}
-              </span>
+              onClick={() => setMeaningIdx(i)}>
+              <span className="mc-key">{opt === "I don't know" ? '?' : String.fromCharCode(65 + i)}</span>
               <span style={{
                 fontSize: '0.95rem',
                 fontStyle: opt === "I don't know" ? 'italic' : 'normal',
                 opacity: opt === "I don't know" ? 0.7 : 1,
-              }}>
-                {opt}
-              </span>
+              }}>{opt}</span>
             </button>
           ))}
         </div>
@@ -196,102 +504,287 @@ function ReadingMeaningQ({ word, config, allWords, onAnswer }) {
   );
 }
 
-// ── Radical noticing question (uses RadicalSelector, hardcoded display) ──────
+// ═══════════════════════════════════════════════════════════════════════════════
+// TRANSFER — kanji visible, participants retrieve radicals via search (no chips)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function RadicalQ({ word, config, onAnswer }) {
-  const targetChar = config?.testKanji ?? word[0];
-  const [radicals, setRadicals]               = useState([]);
-  const [correctDirect, setCorrectDirect]     = useState([]);
-  const [correctIndirect, setCorrectIndirect] = useState([]);
-  const [loading, setLoading]                 = useState(true);
+function TransferQ({ transfer, onAnswer }) {
+  const { kanji, correctRadicals } = transfer;
+  const slotCount = correctRadicals.length;
 
+  // Each slot holds either { radical, english_names, primary_english } or null or 'idk'
+  const [slots, setSlots]       = useState(Array(slotCount).fill(null));
+  const [activeSlot, setActiveSlot] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [startTs] = useState(Date.now());
+  const [searchHistory, setSearchHistory] = useState([]);
+
+  // Debounced search
   useEffect(() => {
-    const load = async () => {
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const t = setTimeout(async () => {
+      setIsSearching(true);
       try {
-        const [browseRes, breakdownRes] = await Promise.all([
-          axios.post(`${API_BASE}/api/radicals/browse-filtered`, { target_kanji: targetChar, window_size: 2 }),
-          axios.post(`${API_BASE}/api/radicals/for-kanji`, { word: targetChar }),
-        ]);
-        const breakdown = breakdownRes.data?.[0];
-        const directSet = new Set(breakdown?.radicals?.map(r => r.radical) ?? []);
-        const allCandidates = [];
-        const seen = new Set();
-        for (const group of browseRes.data?.groups ?? []) {
-          for (const r of group.radicals) {
-            if (!seen.has(r.radical)) {
-              seen.add(r.radical);
-              allCandidates.push({ ...r, is_direct: directSet.has(r.radical) });
-            }
-          }
-        }
-        setRadicals(allCandidates);
-        setCorrectDirect(Array.from(directSet));
-        setCorrectIndirect(allCandidates.filter(r => !r.is_direct).map(r => r.radical));
+        const res = await axios.post(`${API_BASE}/api/radicals/search`, { query: searchQuery });
+        setSearchResults(res.data ?? []);
+        setSearchHistory(prev => [...prev, searchQuery]);
       } catch (e) {
-        console.error('RadicalQ load failed:', e);
+        setSearchResults([]);
       } finally {
-        setLoading(false);
+        setIsSearching(false);
       }
-    };
-    load();
-  }, [targetChar]); // eslint-disable-line
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  const handleSubmit = ({ selected, used_search, search_queries, time_to_submit_ms, free_text_radicals }) => {
-    const selectedSet = new Set(selected);
-    const directSet   = new Set(correctDirect);
-    const indirectSet = new Set(correctIndirect);
-    const directCorrect   = correctDirect.filter(r => selectedSet.has(r));
-    const directMissed    = correctDirect.filter(r => !selectedSet.has(r));
-    const indirectCorrect = correctIndirect.filter(r => selectedSet.has(r));
-    const wrongSelected   = selected.filter(r => !directSet.has(r) && !indirectSet.has(r));
-    const totalDirect     = correctDirect.length || 1;
-    const directScore     = directCorrect.length / totalDirect;
-    const totalScore      = Math.max(0, Math.min(1,
-      (directCorrect.length * 1.0 + indirectCorrect.length * 0.5 - wrongSelected.length * 0.25) / totalDirect
+  const placeRadical = (rad) => {
+    if (activeSlot === null) return;
+    setSlots(prev => {
+      const next = [...prev];
+      next[activeSlot] = rad;
+      return next;
+    });
+    setSearchQuery('');
+    setSearchResults([]);
+    // Auto-advance to next empty slot
+    const nextEmpty = slots.findIndex((s, i) => i !== activeSlot && s === null);
+    if (nextEmpty >= 0) setActiveSlot(nextEmpty);
+  };
+
+  const clearSlot = (idx) => {
+    setSlots(prev => {
+      const next = [...prev];
+      next[idx] = null;
+      return next;
+    });
+    setActiveSlot(idx);
+  };
+
+  const setSlotIDK = (idx) => {
+    setSlots(prev => {
+      const next = [...prev];
+      next[idx] = 'idk';
+      return next;
+    });
+    const nextEmpty = slots.findIndex((s, i) => i !== idx && s === null);
+    if (nextEmpty >= 0) setActiveSlot(nextEmpty);
+  };
+
+  const allSlotsFilled = slots.every(s => s !== null);
+
+  const handleSubmit = () => {
+    const answeredRadicals = slots.map(s => (s === 'idk' ? 'i_dont_know' : s?.radical ?? null));
+    const correctSet = new Set(correctRadicals);
+    const placedSet  = new Set(answeredRadicals.filter(r => r && r !== 'i_dont_know'));
+    const partialMap = transfer.partialComponents ?? {};
+
+    const correctSelected = correctRadicals.filter(r => placedSet.has(r));
+    const correctMissed   = correctRadicals.filter(r => !placedSet.has(r));
+
+    // Partial credit: placed components that aren't direct radicals but contain
+    // some correct radicals as sub-components (e.g. 召 covers 刀+口 for 紹)
+    const partialCredits = []; // [{ placed, covers: [radicals] }]
+    const wrongSelected = [];
+    for (const placed of placedSet) {
+      if (correctSet.has(placed)) continue; // already in correctSelected
+      if (partialMap[placed]) {
+        partialCredits.push({ placed, covers: partialMap[placed] });
+      } else {
+        wrongSelected.push(placed);
+      }
+    }
+
+    // Add radicals covered by partial placements to "covered" set
+    const coveredByPartial = new Set();
+    for (const pc of partialCredits) {
+      for (const r of pc.covers) coveredByPartial.add(r);
+    }
+    // Subtract from missed: a radical that's missed but covered by a partial counts as covered
+    const trulyMissed = correctMissed.filter(r => !coveredByPartial.has(r));
+    const partiallyCovered = correctMissed.filter(r => coveredByPartial.has(r));
+
+    const idkCount = answeredRadicals.filter(r => r === 'i_dont_know').length;
+    const total    = correctRadicals.length || 1;
+
+    // direct_score: only counts exact-match radicals as full credit
+    const directScore = correctSelected.length / total;
+    // total_score: includes partial credit (0.5 per radical covered by a partial component)
+    const partialPoints = partiallyCovered.length * 0.5;
+    const totalScore = Math.max(0, Math.min(1,
+      (correctSelected.length + partialPoints - wrongSelected.length * 0.25) / total
     ));
-    const noData = !correctDirect.length;
 
     onAnswer({
-      word,
-      question_type:    'radical',
-      target_kanji:     targetChar,
-      other_kanji:      config?.otherKanji ?? null,
-      blank_display:    config?.blankDisplay ?? '[–]',
-      selected_radicals: selected,
-      correct_radicals:  correctDirect,
-      indirect_radicals: correctIndirect,
-      directCorrect, directMissed, indirectCorrect, wrongSelected,
-      direct_score: noData ? null : directScore,
-      total_score:  noData ? null : totalScore,
-      no_data: noData,
-      used_search, search_queries, time_to_submit_ms,
-      free_text_radicals: free_text_radicals ?? null,
+      word: kanji,
+      question_type: 'transfer',
+      transfer_kanji: kanji,
+      slots_answered: answeredRadicals,
+      correct_radicals: correctRadicals,
+      correctSelected,
+      correctMissed: trulyMissed,
+      partiallyCovered,        // radicals not directly placed but covered by a partial component
+      partialCredits,          // [{ placed: '召', covers: ['刀','口'] }, ...]
+      wrongSelected,
+      idk_count: idkCount,
+      direct_score: directScore,
+      total_score:  totalScore,
+      search_history: searchHistory,
+      time_to_submit_ms: Date.now() - startTs,
     });
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        <h2 style={{ fontSize: '1.1rem', lineHeight: 1.4 }}>
-          {config?.postTestHeader
-            ?? `What radicals did you remember in the kanji for "${config?.radicalKanjiMeaning ?? word}"`}
+
+      {/* Kanji display */}
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', marginBottom: '0.4rem' }}>
+          New kanji — you may not have seen this one before
+        </p>
+        <span style={{ fontFamily: 'var(--font-jp)', fontSize: '4rem', fontWeight: 500 }}>{kanji}</span>
+        <h2 style={{ fontSize: '1rem', marginTop: '0.6rem', lineHeight: 1.4 }}>
+          Find the {slotCount} radicals that make up this kanji
         </h2>
-        <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)' }}>
-          in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
-            {config?.testDisplayLine ?? config?.blankDisplay ?? word}
-          </span>
-        </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', fontStyle: 'italic', marginTop: '0.3rem' }}>
+          Search by name (e.g. "water", "tree", "mouth")
+        </p>
       </div>
-      {loading ? (
-        <p style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '1rem' }}>Loading…</p>
-      ) : (
-        <RadicalSelector candidateRadicals={radicals} onSubmit={handleSubmit} submitLabel="Next →" />
+
+      {/* Slots */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {slots.map((slot, i) => {
+          const isActive = activeSlot === i;
+          const isFilled = slot !== null;
+          const isIDK    = slot === 'idk';
+          return (
+            <div
+              key={i}
+              onClick={() => isFilled ? clearSlot(i) : setActiveSlot(i)}
+              style={{
+                width: '70px',
+                height: '70px',
+                border: isActive ? '2px solid var(--accent)' : '1.5px dashed var(--paper-border)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                background: isFilled ? (isIDK ? 'var(--paper-warm)' : 'white') : 'transparent',
+                position: 'relative',
+              }}
+            >
+              {isFilled ? (
+                isIDK ? (
+                  <span style={{ fontSize: '0.7rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>?</span>
+                ) : (
+                  <>
+                    <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.5rem' }}>{slot.radical}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--ink-muted)' }}>
+                      {slot.english_names?.[0] ?? slot.primary_english ?? ''}
+                    </span>
+                  </>
+                )
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: 'var(--ink-faint)' }}>+</span>
+              )}
+              {isFilled && (
+                <span style={{
+                  position: 'absolute', top: '-6px', right: '-6px',
+                  background: 'var(--ink-faint)', color: 'white',
+                  borderRadius: '50%', width: '16px', height: '16px',
+                  fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>✕</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Search input — only show when an active slot is empty */}
+      {activeSlot !== null && slots[activeSlot] === null && (
+        <>
+          <input
+            type="text"
+            placeholder="Search radicals (e.g., 'water', 'tree')…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+            autoFocus
+            style={{
+              padding: '0.7rem 0.9rem',
+              border: '1.5px solid var(--paper-border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.95rem',
+              outline: 'none',
+            }}
+          />
+
+          {/* Search results */}
+          {isSearching && <p style={{ textAlign: 'center', color: 'var(--ink-faint)', fontSize: '0.85rem' }}>Searching…</p>}
+          {searchResults.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {searchResults.map((r, i) => (
+                <button
+                  key={i}
+                  onClick={() => placeRadical(r)}
+                  style={{
+                    padding: '0.4rem 0.7rem',
+                    border: '1.5px solid var(--paper-border)',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
+                  <span style={{ fontFamily: 'var(--font-jp)', fontSize: '1.2rem' }}>{r.radical}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                    {r.english_names?.[0] ?? r.primary_english ?? ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* I don't know option */}
+          <button
+            onClick={() => setSlotIDK(activeSlot)}
+            style={{
+              alignSelf: 'flex-start',
+              padding: '0.4rem 0.8rem',
+              fontSize: '0.8rem',
+              background: 'transparent',
+              border: '1px solid var(--paper-border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--ink-faint)',
+              cursor: 'pointer',
+              fontStyle: 'italic',
+            }}
+          >
+            I don't know — leave this slot blank
+          </button>
+        </>
       )}
+
+      <button
+        className="btn btn-primary btn-full"
+        onClick={handleSubmit}
+        disabled={!allSlotsFilled}
+        style={{ marginTop: '0.5rem' }}
+      >
+        {allSlotsFilled ? 'Next →' : `Fill all ${slotCount} slots to continue`}
+      </button>
     </div>
   );
 }
 
-// ── Main: unified test ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function KanjiTestPage({ participant, session, onComplete }) {
   const { glossLog } = session;
@@ -319,7 +812,6 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
       <div className="page">
         <div className="page-inner animate-in" style={{ textAlign: 'center', paddingTop: '4rem' }}>
           <h2>No words to test</h2>
-          <p style={{ marginTop: '0.5rem' }}>No glossed words were found for this test.</p>
           <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => onComplete([])}>
             Continue →
           </button>
@@ -329,8 +821,14 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
   }
 
   const current = testItems[currentIdx];
-  const config  = current.config;
   const allWords = Object.keys(TARGET_KANJI);
+
+  const phaseLabel = {
+    strict_radical:   'Radical recognition (with hint)',
+    soft_radical:     'Radical recognition (remove distractors)',
+    reading_meaning:  'Reading & meaning',
+    transfer:         'New kanji — radical decomposition',
+  }[current.phase] ?? '';
 
   return (
     <div className="page">
@@ -340,34 +838,29 @@ export default function KanjiTestPage({ participant, session, onComplete }) {
           <h3>Quiz — {currentIdx + 1} / {testItems.length}</h3>
           <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
             {testItems.map((item, i) => (
-              <div
-                key={i}
+              <div key={i}
                 className={`progress-dot ${i < currentIdx ? 'done' : i === currentIdx ? 'active' : ''}`}
-                title={`${item.word} (${item.type})`}
+                title={`${item.word} (${item.phase})`}
               />
             ))}
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', marginTop: '0.3rem' }}>
-            {current.type === 'radical' ? 'Radical recognition' : 'Reading & meaning'}
+            {phaseLabel}
           </p>
         </div>
 
         <div className="card">
-          {current.type === 'reading_meaning' ? (
-            <ReadingMeaningQ
-              key={`rm-${currentIdx}`}
-              word={current.word}
-              config={config}
-              allWords={allWords}
-              onAnswer={handleAnswer}
-            />
-          ) : (
-            <RadicalQ
-              key={`rad-${currentIdx}`}
-              word={current.word}
-              config={config}
-              onAnswer={handleAnswer}
-            />
+          {current.phase === 'strict_radical' && (
+            <StrictRadicalQ key={`s${currentIdx}`} word={current.word} config={current.config} onAnswer={handleAnswer} />
+          )}
+          {current.phase === 'soft_radical' && (
+            <SoftRadicalQ key={`o${currentIdx}`} word={current.word} config={current.config} onAnswer={handleAnswer} />
+          )}
+          {current.phase === 'reading_meaning' && (
+            <ReadingMeaningQ key={`rm${currentIdx}`} word={current.word} config={current.config} allWords={allWords} onAnswer={handleAnswer} />
+          )}
+          {current.phase === 'transfer' && (
+            <TransferQ key={`t${currentIdx}`} transfer={current.transfer} onAnswer={handleAnswer} />
           )}
         </div>
 

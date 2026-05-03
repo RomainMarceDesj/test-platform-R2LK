@@ -385,3 +385,50 @@ export const POSTTEST_QUESTIONNAIRE = [
     placeholder: 'Optional — any context you think is relevant…',
   },
 ];
+
+
+// ── In-text radicals (used as distractor pool for radical questions) ─────────
+// Hand-curated list of radicals that appear in any kanji of the reading text.
+export const IN_TEXT_RADICALS = [
+  '氵', '日', '糸', '宀', '子', '木', '言', '口', '衣', '王', '見', '白',
+  '扌', '寺', '角', '刀', '牛', '灬', '占', '比', '又', '目', '田', '艹',
+  '世', '谷', '穴', '八', '一', '二', '廾', '勺', '売', '耂', '里', '会',
+  '人', '冂', '亻', '本',
+];
+
+// ── English sentence contexts for radical questions ──────────────────────────
+// Shown as an episodic cue without re-exposing the original Japanese.
+export const EN_SENTENCE_CONTEXT = {
+  '漫画':   'the kanji from the sentence introducing manga as having pictures',
+  '絵':     'the kanji from the sentence about pictures making manga easy to understand',
+  '内容':   'the kanji from the sentence about content being easy to understand',
+  '表現':   'the kanji from the sentence about expression by words alone',
+  '具体的': 'the kanji from the sentence about forming concrete mental images',
+  '読者':   'the kanji from the sentence about the reader being able to understand',
+  '理解':   'the kanji from the sentence about comprehension being easier',
+};
+
+// ── Transfer kanji (novel kanji built from in-text radicals) ─────────────────
+// Same items shown to all participants, regardless of which words they glossed.
+export const TRANSFER_KANJI = [
+  {
+    kanji: '紹',
+    correctRadicals: ['糸', '刀', '口'],
+    radicalsInText: { '糸': true, '刀': true, '口': true },
+    sourceWordsInText: { '糸': '絵', '刀': '解', '口': '容/言/読' },
+    // Partial-credit components: each maps to the correct radicals it contains.
+    // E.g. placing 召 covers both 刀 and 口 (one level up from full decomposition).
+    partialComponents: {
+      '召': ['刀', '口'],   // 召 = 刀 + 口
+    },
+  },
+  {
+    kanji: '拊',
+    correctRadicals: ['扌', '亻', '寸'],
+    radicalsInText: { '扌': true, '亻': true, '寸': true },
+    sourceWordsInText: { '扌': '持', '亻': '体', '寸': '持 (in 寺)' },
+    partialComponents: {
+      '付': ['亻', '寸'],   // 付 = 亻 + 寸
+    },
+  },
+];
