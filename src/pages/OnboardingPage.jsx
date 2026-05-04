@@ -157,8 +157,7 @@ export default function OnboardingPage({ onComplete }) {
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <a
-              href= "https://drive.google.com/uc?export=download&id=1dyZnlBE4O2wkWMS1Nffzyw5dbyTNtTnN"
-              //"https://drive.google.com/uc?export=download&id=1dyZnlBE4O2wkWMS1Nffzyw5dbyTNtTnN" or "https://drive.google.com/file/d/1dyZnlBE4O2wkWMS1Nffzyw5dbyTNtTnN/view?usp=sharing"
+              href="https://drive.google.com/uc?export=download&id=17KSDoKssnABTW4SB7Bmab5hk8FnY4HkO"
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary"
