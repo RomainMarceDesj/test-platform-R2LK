@@ -162,8 +162,11 @@ export default function MidQuizPage({
           <h3 style={{ marginBottom: '0.4rem' }}>Quick check</h3>
           <h2>{quizHeader}</h2>
           <div style={{ marginTop: '0.5rem', fontFamily: 'var(--font-jp)', fontSize: '1.05rem', color: 'var(--ink-muted)' }}>
-            in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{testDisplayLine}</span>
+            in <span style={{ fontWeight: 400 }}>{renderDisplayLine(testDisplayLine)}</span>
           </div>
+          <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', lineHeight: 1.5, marginTop: '0.4rem' }}>
+            The bold <strong style={{ color: 'var(--accent)' }}>O</strong> is the kanji you should remember the radicals of — not the other characters.
+          </p>
         </div>
 
         {/* Sentence context */}

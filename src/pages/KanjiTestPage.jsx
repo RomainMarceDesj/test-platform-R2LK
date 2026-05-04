@@ -39,6 +39,23 @@ function shuffle(arr) {
 function configFor(word) {
   return TARGET_KANJI[word] ?? NON_TARGET_RADICAL_WORDS?.[word] ?? null;
 }
+// Render testDisplayLine with the placeholder 'O' in bold, kanji in normal weight.
+// Input: 'O容 (ないよう, content, substance)'
+// Output: <span>O</span> bolded, the rest normal.
+function renderDisplayLine(line) {
+  if (!line) return null;
+  // Split on the literal 'O' placeholder — there's only ever one per line.
+  const idx = line.indexOf('O');
+  if (idx === -1) return line;
+  return (
+    <>
+      {line.slice(0, idx)}
+      <span style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '1.1em' }}>O</span>
+      {line.slice(idx + 1)}
+    </>
+  );
+}
+
 
 function buildMcOptions(correct, pool, getVal, count = 3) {
   const seen = new Set([correct]);
@@ -211,7 +228,7 @@ function StrictRadicalQ({ word, config, onAnswer }) {
       word,
       question_type:    'strict_radical',
       target_kanji:     targetChar,
-      blank_display:    config?.blankDisplay ?? '[-]',
+      blank_display:    config?.blankDisplay ?? 'O',
       selected_radicals: selected,
       correct_radicals:  correctDirect,
       directCorrect, directMissed, wrongSelected,
@@ -230,11 +247,14 @@ function StrictRadicalQ({ word, config, onAnswer }) {
           {config?.postTestHeader
             ?? `What radicals did you remember in the kanji for "${config?.radicalKanjiMeaning ?? word}"`}
         </h2>
-        <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)' }}>
-          in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
-            {config?.testDisplayLine ?? config?.blankDisplay ?? word}
+        <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1.05rem', color: 'var(--ink-muted)' }}>
+          in <span style={{ fontWeight: 400 }}>
+            {renderDisplayLine(config?.testDisplayLine ?? config?.blankDisplay ?? word)}
           </span>
         </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', lineHeight: 1.5, marginTop: '0.2rem' }}>
+          The bold <strong style={{ color: 'var(--accent)' }}>O</strong> is the kanji you should remember the radicals of — not the other characters.
+        </p>
         {EN_SENTENCE_CONTEXT[word] && (
           <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', fontStyle: 'italic', lineHeight: 1.5 }}>
             ({EN_SENTENCE_CONTEXT[word]})
@@ -353,12 +373,15 @@ function SoftRadicalQ({ word, config, onAnswer }) {
           </span>
         </h2>
         {config?.testDisplayLine && (
-          <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1rem', color: 'var(--ink-muted)' }}>
-            in <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
-              {config.testDisplayLine}
+          <div style={{ fontFamily: 'var(--font-jp)', fontSize: '1.05rem', color: 'var(--ink-muted)' }}>
+            in <span style={{ fontWeight: 400 }}>
+              {renderDisplayLine(config.testDisplayLine)}
             </span>
           </div>
         )}
+        <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', lineHeight: 1.5 }}>
+          The bold <strong style={{ color: 'var(--accent)' }}>O</strong> is the kanji you should think about — not the other characters.
+        </p>
         {EN_SENTENCE_CONTEXT[word] && (
           <p style={{ fontSize: '0.78rem', color: 'var(--ink-faint)', fontStyle: 'italic', lineHeight: 1.5 }}>
             ({EN_SENTENCE_CONTEXT[word]})
@@ -545,16 +568,18 @@ function TransferQ({ transfer, onAnswer }) {
   const [isSearching, setIsSearching] = useState(false);
   const [startTs] = useState(Date.now());
   const [searchHistory, setSearchHistory] = useState([]);
+  const searchInputRef = React.useRef(null);
 
-  // Debounced search
+  // Debounced search — requires ≥2 characters to avoid flooding with single-letter matches
   useEffect(() => {
-    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const q = searchQuery.trim();
+    if (q.length < 2) { setSearchResults([]); return; }
     const t = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await axios.post(`${API_BASE}/api/radicals/search`, { query: searchQuery });
+        const res = await axios.post(`${API_BASE}/api/radicals/search`, { query: q });
         setSearchResults(res.data ?? []);
-        setSearchHistory(prev => [...prev, searchQuery]);
+        setSearchHistory(prev => [...prev, q]);
       } catch (e) {
         setSearchResults([]);
       } finally {
@@ -686,7 +711,15 @@ function TransferQ({ transfer, onAnswer }) {
           return (
             <div
               key={i}
-              onClick={() => isFilled ? clearSlot(i) : setActiveSlot(i)}
+              onClick={() => {
+                if (isFilled) {
+                  clearSlot(i);
+                } else {
+                  setActiveSlot(i);
+                  // Focus the search input on the next tick so the keyboard pops on mobile
+                  setTimeout(() => searchInputRef.current?.focus(), 0);
+                }
+              }}
               style={{
                 width: '70px',
                 height: '70px',
@@ -732,6 +765,7 @@ function TransferQ({ transfer, onAnswer }) {
       {activeSlot !== null && slots[activeSlot] === null && (
         <>
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search radicals (e.g., 'water', 'tree')…"
             value={searchQuery}
@@ -748,6 +782,11 @@ function TransferQ({ transfer, onAnswer }) {
           />
 
           {/* Search results */}
+          {searchQuery.trim().length === 1 && (
+            <p style={{ textAlign: 'center', color: 'var(--ink-faint)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+              Keep typing — at least 2 letters needed
+            </p>
+          )}
           {isSearching && <p style={{ textAlign: 'center', color: 'var(--ink-faint)', fontSize: '0.85rem' }}>Searching…</p>}
           {searchResults.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
